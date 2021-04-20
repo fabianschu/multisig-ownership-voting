@@ -6,7 +6,7 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts();
   const { deploy } = deployments;
 
-  await deploy("BalancerProxy", {
+  await deploy("BPool", {
     from: deployer,
     args: [],
     log: true,
