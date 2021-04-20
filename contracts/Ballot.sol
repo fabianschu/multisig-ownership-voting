@@ -5,7 +5,6 @@ import "hardhat/console.sol";
 import "./gnosis/base/OwnerManager.sol";
 
 contract Ballot is OwnerManager {
-
     // TODO
 
     // tie ballot to balancer pool
@@ -13,4 +12,8 @@ contract Ballot is OwnerManager {
     // add proposal logic:
     // if proposal to add owner is accepted addOwnerWithThreshold is called
     // if proposal to remove owner is accepted removeOwner is called
+    
+    function addOwner(address _newOwner, uint _newThreshold) public {
+        addOwnerWithThreshold(_newOwner, _newThreshold);
+    }
 }

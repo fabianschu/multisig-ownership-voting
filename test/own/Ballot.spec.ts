@@ -17,21 +17,15 @@ describe("Ballot", async () => {
   describe("#addOwner", () => {
     it("should add a new owner", async () => {
       const safe = await getSafeWithOwners([alice.address]);
-      // await ballot.addOwner(bob.address, 1);
       await safe.addOwner(bob.address, 1);
       expect(await safe.isOwner(bob.address)).to.equal(true);
     });
   });
 
-  // describe("#removeOwner", () => {
-  //   it("should remove the owner", async () => {
-  //     const ballot = await ethers.getContract("Ballot");
-  //     const safe = await getSafeWithOwners(
-  //       [alice.address, bob.address],
-  //       ballot.address
-  //     );
-  //     await ballot.removeOwner(bob.address, 1);
-  //     // expect(await safe.removeOwner(bob.address)).to.equal(true);
-  //   });
-  // });
+  describe("#removeOwner", () => {
+    it("should remove the owner", async () => {
+      const bPool = await ethers.getContract("BPool");
+      console.log(bPool);
+    });
+  });
 });
