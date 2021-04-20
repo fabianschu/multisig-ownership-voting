@@ -6,13 +6,6 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts();
   const { deploy } = deployments;
 
-  await deploy("Ballot", {
-    from: deployer,
-    args: [],
-    log: true,
-    deterministicDeployment: true,
-  });
-
   await deploy("GnosisSafe", {
     from: deployer,
     args: [],

@@ -2,17 +2,15 @@
 pragma solidity >=0.7.0 <0.9.0;
 
 import "hardhat/console.sol";
-import "./gnosis/GnosisSafe.sol";
+import "./gnosis/base/OwnerManager.sol";
 
-contract Ballot{
-    GnosisSafe safe;
+contract Ballot is OwnerManager {
 
-    function connectSafe() public {
-        require(address(safe) == address(0), "B1");
-        safe = GnosisSafe(payable(msg.sender));
-    }
+    // TODO
 
-    function addOwner(address _newOwner, uint _newThreshold) public {
-        safe.addOwnerWithThreshold(_newOwner, _newThreshold);
-    }
+    // tie ballot to balancer pool
+
+    // add proposal logic:
+    // if proposal to add owner is accepted addOwnerWithThreshold is called
+    // if proposal to remove owner is accepted removeOwner is called
 }

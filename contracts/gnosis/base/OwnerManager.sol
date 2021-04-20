@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity >=0.7.0 <0.9.0;
-import "../../OnlyManager.sol";
 
 /// @title OwnerManager - Manages a set of owners and a threshold to perform actions.
 /// @author Stefan George - <stefan@gnosis.pm>
 /// @author Richard Meissner - <richard@gnosis.pm>
-contract OwnerManager is OnlyManager {
+contract OwnerManager {
     event AddedOwner(address owner);
     event RemovedOwner(address owner);
     event ChangedThreshold(uint256 threshold);
@@ -19,7 +18,7 @@ contract OwnerManager is OnlyManager {
     /// @dev Setup function sets initial storage of contract.
     /// @param _owners List of Safe owners.
     /// @param _threshold Number of required confirmations for a Safe transaction.
-    function setupOwners(address[] memory _owners, uint256 _threshold, address _manager) internal {
+    function setupOwners(address[] memory _owners, uint256 _threshold) internal {
         // Threshold can only be 0 at initialization.
         // Check ensures that setup function can only be called once.
         require(threshold == 0, "GS200");
@@ -38,7 +37,6 @@ contract OwnerManager is OnlyManager {
             owners[currentOwner] = owner;
             currentOwner = owner;
         }
-        setManager(_manager);
         owners[currentOwner] = SENTINEL_OWNERS;
         ownerCount = _owners.length;
         threshold = _threshold;
@@ -49,8 +47,7 @@ contract OwnerManager is OnlyManager {
     /// @notice Adds the owner `owner` to the Safe and updates the threshold to `_threshold`.
     /// @param owner New owner address.
     /// @param _threshold New threshold.
-    function addOwnerWithThreshold(address owner, uint256 _threshold) public onlyManager {
-        require(msg.sender == manager, "GS2XX");
+    function addOwnerWithThreshold(address owner, uint256 _threshold) internal {
         // Owner address cannot be null, the sentinel or the Safe itself.
         require(owner != address(0) && owner != SENTINEL_OWNERS && owner != address(this), "GS203");
         // No duplicate owners allowed.
@@ -73,7 +70,7 @@ contract OwnerManager is OnlyManager {
         address prevOwner,
         address owner,
         uint256 _threshold
-    ) public onlyManager {
+    ) internal {
         // Only allow to remove an owner, if threshold can still be reached.
         require(ownerCount - 1 >= _threshold, "GS201");
         // Validate owner address and check that it corresponds to owner index.
@@ -97,7 +94,7 @@ contract OwnerManager is OnlyManager {
         address prevOwner,
         address oldOwner,
         address newOwner
-    ) public onlyManager {
+    ) internal {
         // Owner address cannot be null, the sentinel or the Safe itself.
         require(newOwner != address(0) && newOwner != SENTINEL_OWNERS && newOwner != address(this), "GS203");
         // No duplicate owners allowed.

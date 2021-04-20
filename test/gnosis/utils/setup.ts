@@ -86,7 +86,6 @@ export const getSafeTemplate = async () => {
 
 export const getSafeWithOwners = async (
   owners: string[],
-  ballotAddress: string,
   threshold?: number,
   fallbackHandler?: string,
   logGasUsage?: boolean
@@ -101,7 +100,6 @@ export const getSafeWithOwners = async (
     template.setup(
       owners,
       threshold || owners.length,
-      ballotAddress,
       AddressZero,
       "0x",
       fallbackHandler || AddressZero,
