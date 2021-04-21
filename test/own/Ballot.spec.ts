@@ -13,7 +13,10 @@ describe("Ballot", async () => {
         contractInstances: { usdtInstance, daiInstance, bPoolinstance },
         users: { alice, bob, carlos },
       } = await setupBalancerPool();
-      const safeInstance = await getSafeWithOwners([alice.address]);
+      const safeInstance = await getSafeWithOwners(
+        [alice.address],
+        bPoolinstance.address
+      );
 
       // expect(await safeInstance.isOwner(bob.address)).to.equal(true);
     });

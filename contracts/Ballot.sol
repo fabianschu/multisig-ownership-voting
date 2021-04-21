@@ -3,11 +3,14 @@ pragma solidity >=0.7.0 <0.9.0;
 
 import "hardhat/console.sol";
 import "./gnosis/base/OwnerManager.sol";
+import "./primeBalancer/interfaces/IBPool.sol";
 
 contract Ballot is OwnerManager {
-    // TODO
+    IBPool internal bPool;
 
-    // tie ballot to balancer pool
+    function setupPool(address _bPool) internal {
+        bPool = IBPool(_bPool);
+    }
 
     // add proposal logic:
     // if proposal to add owner is accepted addOwnerWithThreshold is called

@@ -86,6 +86,7 @@ export const getSafeTemplate = async () => {
 
 export const getSafeWithOwners = async (
   owners: string[],
+  bPool: string,
   threshold?: number,
   fallbackHandler?: string,
   logGasUsage?: boolean
@@ -99,6 +100,7 @@ export const getSafeWithOwners = async (
     }`,
     template.setup(
       owners,
+      bPool,
       threshold || owners.length,
       AddressZero,
       "0x",
