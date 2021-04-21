@@ -70,6 +70,7 @@ contract GnosisSafe is
 
     /// @dev Setup function sets initial storage of contract.
     /// @param _owners List of Safe owners.
+    /// @param _bPool Address of balancer pool.
     /// @param _threshold Number of required confirmations for a Safe transaction.
     /// @param to Contract address for optional delegate call.
     /// @param data Data payload for optional delegate call.
@@ -79,6 +80,7 @@ contract GnosisSafe is
     /// @param paymentReceiver Adddress that should receive the payment (or 0 if tx.origin)
     function setup(
         address[] calldata _owners,
+        address _bPool,
         uint256 _threshold,
         address to,
         bytes calldata data,
@@ -89,6 +91,7 @@ contract GnosisSafe is
     ) external {
         // setupOwners checks if the Threshold is already set, therefore preventing that this method is called twice
         setupOwners(_owners, _threshold);
+        setupBalancerPool(_bPool);
         if (fallbackHandler != address(0)) internalSetFallbackHandler(fallbackHandler);
         // As setupOwners can only be called if the contract has not been initialized we don't need a check for setupModules
         setupModules(to, data);
