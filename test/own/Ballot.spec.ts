@@ -104,7 +104,7 @@ describe("Ballot", async () => {
           );
         });
 
-        it("should update the register of stakes", async () => {
+        it("should update the registery of stakes", async () => {
           expect(await safeInstance.stakes(alice.address)).to.equal(0);
         });
 
@@ -126,13 +126,13 @@ describe("Ballot", async () => {
             .addProposal(addOwnerProposal, bob.address, newThreshold);
         });
 
-        it("removes active votes from voter side registery", async () => {
+        it("should remove active votes from voter side registery", async () => {
           await safeInstance.connect(carlos).unstake();
 
           expect(safeInstance.votes(carlos.address, 0)).to.be.reverted;
         });
 
-        it("removes active votes from ONE open proposal", async () => {
+        it("should remove active votes from ONE open proposal", async () => {
           await safeInstance.connect(carlos).unstake();
           [
             type,
@@ -145,7 +145,7 @@ describe("Ballot", async () => {
           expect(votes).to.equal(0);
         });
 
-        it("removes active votes from TWO open proposals", async () => {
+        it("should remove active votes from TWO open proposals", async () => {
           didoInitialBalance = await bPoolinstance.balanceOf(dido.address);
           await bPoolinstance.connect(dido).approve(safeInstance.address, MAX);
           await safeInstance.connect(dido).stake();
@@ -160,6 +160,28 @@ describe("Ballot", async () => {
           );
           expect(firstProposal[3]).to.equal(0);
           expect(secondProposal[3]).to.equal(didoInitialBalance);
+        });
+
+        it.only("should NOT remove active votes from closed proposal", async () => {
+          aliceInitialBalance = await bPoolinstance.balanceOf(alice.address);
+          bobInitialBalance = await bPoolinstance.balanceOf(bob.address);
+          await safeInstance.stake();
+          await bPoolinstance.connect(bob).approve(safeInstance.address, MAX);
+          await safeInstance.connect(bob).stake();
+          await safeInstance.vote(firstProposalIdx);
+          await safeInstance.connect(bob).vote(firstProposalIdx);
+          await safeInstance.connect(carlos).unstake();
+          [
+            type,
+            address,
+            threshold,
+            votes,
+            status,
+          ] = await safeInstance.proposals(firstProposalIdx);
+
+          expect(votes).to.equal(
+            aliceInitialBalance.add(bobInitialBalance).add(carlosInitialBalance)
+          );
         });
       });
     });
