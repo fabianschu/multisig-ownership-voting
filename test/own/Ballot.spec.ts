@@ -29,7 +29,8 @@ describe("Ballot", async () => {
     address: string,
     threshold: BigNumber,
     votes: BigNumber,
-    status: BigNumber;
+    status: BigNumber,
+    voters: Array<string>;
 
   beforeEach(async () => {
     await deployments.fixture();
@@ -181,6 +182,7 @@ describe("Ballot", async () => {
             threshold,
             votes,
             status,
+            voters,
           ] = await safeInstance.proposals(0);
 
           expect(type).to.equal(addOwnerProposal);
@@ -218,7 +220,7 @@ describe("Ballot", async () => {
             );
         });
 
-        it("should register that caller has voted for proposal", async () => {
+        it("should register proposal as voted by the caller", async () => {
           await safeInstance.addProposal(
             addOwnerProposal,
             bob.address,
@@ -227,6 +229,19 @@ describe("Ballot", async () => {
           expect(await safeInstance.votes(alice.address, 0)).to.equal(
             firstProposalIdx
           );
+        });
+
+        it("should register caller as voter for proposal", async () => {
+          await safeInstance.addProposal(
+            addOwnerProposal,
+            bob.address,
+            newThreshold
+          );
+          const [address] = await safeInstance.getVotersForProposal(
+            firstProposalIdx
+          );
+
+          expect(address).to.equal(alice.address);
         });
       });
     });
@@ -289,6 +304,7 @@ describe("Ballot", async () => {
             threshold,
             votes,
             status,
+            voters,
           ] = await safeInstance.proposals(firstProposalIdx);
         });
 
@@ -330,6 +346,7 @@ describe("Ballot", async () => {
             threshold,
             votes,
             status,
+            voters,
           ] = await safeInstance.proposals(firstProposalIdx);
         });
 

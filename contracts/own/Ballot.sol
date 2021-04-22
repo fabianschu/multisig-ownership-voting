@@ -17,6 +17,7 @@ contract Ballot is OwnerManager {
         uint newThreshold;
         uint votes;
         ProposalStatus proposalStatus;
+        address[] voters;
     }
 
     event ProposalAdded (uint index, uint proposalType, address target, uint newThreshold);
@@ -34,8 +35,8 @@ contract Ballot is OwnerManager {
     IERC20 internal bPool;
     uint256 constant public MAX_INT = type(uint256).max;    
     uint public stakedAmount;
-    mapping(address => uint) public stakes;
     uint public numberProposals;
+    mapping(address => uint) public stakes;
     mapping(uint => Proposal) public proposals;
     mapping(address => uint[]) public votes;
 
@@ -65,14 +66,17 @@ contract Ballot is OwnerManager {
 
     function addProposal(uint _type, address _target, uint _newThreshold) public onlyStaker {
         require(_target != address(0), "B4");
-
+        address[] memory initialVoters = new address[](1);
+        initialVoters[0] = msg.sender;
         Proposal memory proposal = Proposal(
             ProposalType(_type),
             _target,
             _newThreshold,
             stakes[msg.sender],
-            ProposalStatus.open
+            ProposalStatus.open,
+            initialVoters
         );
+    
         emit ProposalAdded(numberProposals, _type, _target, _newThreshold);
         proposals[numberProposals] = proposal;
         votes[msg.sender].push(numberProposals);
@@ -99,5 +103,9 @@ contract Ballot is OwnerManager {
         uint votes = proposals[_index].votes;
         uint total = bPool.totalSupply();
         return votes * 2 > total;
+    }
+
+    function getVotersForProposal(uint _index) public view returns(address[] memory) {
+        return proposals[_index].voters;
     }
 }
