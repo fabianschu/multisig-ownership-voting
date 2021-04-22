@@ -96,6 +96,7 @@ contract Ballot is OwnerManager {
             proposals[_index].proposalStatus = ProposalStatus.closed;
         } else {
             votes[msg.sender].push(_index);
+            proposals[_index].voters.push(msg.sender);
         }
     }
 

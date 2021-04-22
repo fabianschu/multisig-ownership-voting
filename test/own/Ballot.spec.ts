@@ -144,7 +144,7 @@ describe("Ballot", async () => {
     const newThreshold = 2;
 
     describe("#addProposal", () => {
-      it("should revert when caller is NOT staker", async () => {
+      it("should revert when proposer is NOT staker", async () => {
         const addProposal = safeInstance.addProposal(
           addOwnerProposal,
           bob.address,
@@ -153,7 +153,7 @@ describe("Ballot", async () => {
         await expect(addProposal).to.be.revertedWith("B2");
       });
 
-      describe("when caller is staker", () => {
+      describe("when proposer is staker", () => {
         beforeEach(async () => {
           aliceInitialBalance = await bPoolinstance.balanceOf(alice.address);
           await bPoolinstance.approve(safeInstance.address, MAX);
@@ -220,7 +220,7 @@ describe("Ballot", async () => {
             );
         });
 
-        it("should register proposal as voted by the caller", async () => {
+        it("should register proposal as voted by the caller (voter side)", async () => {
           await safeInstance.addProposal(
             addOwnerProposal,
             bob.address,
@@ -231,7 +231,7 @@ describe("Ballot", async () => {
           );
         });
 
-        it("should register caller as voter for proposal", async () => {
+        it("should register caller as voter for proposal (proposal side)", async () => {
           await safeInstance.addProposal(
             addOwnerProposal,
             bob.address,
@@ -365,10 +365,18 @@ describe("Ballot", async () => {
           expect(status).to.equal(openProposal);
         });
 
-        it("should register that voter has voted for proposal", async () => {
+        it("should register that voter has voted for proposal (voter side)", async () => {
           expect(await safeInstance.votes(dido.address, 0)).to.equal(
             firstProposalIdx
           );
+        });
+
+        it("should register that voter has voted for proposal (proposal side)", async () => {
+          const [
+            firstAddress,
+            secondAddress,
+          ] = await safeInstance.getVotersForProposal(firstProposalIdx);
+          expect(secondAddress).to.equal(dido.address);
         });
       });
     });
