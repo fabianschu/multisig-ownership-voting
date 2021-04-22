@@ -86,9 +86,10 @@ contract Ballot is OwnerManager {
     }
 
     function vote(uint _index) public onlyStaker activeProposal(_index) {
+        require(!hasAlreadyVoted(_index), "B5");
+
         proposals[_index].votes += stakes[msg.sender];
-        bool majority = isMajority(_index);
-        if (majority) {
+        if (isMajorityVote(_index)) {
             uint newSafeThreshold = proposals[_index].newThreshold;
             address elected = proposals[_index].owner;
             if (proposals[_index].proposalType == ProposalType.addOwner) {
@@ -102,9 +103,17 @@ contract Ballot is OwnerManager {
         }
     }
 
-    function isMajority(uint _index) internal view returns(bool){
-        uint votes = proposals[_index].votes;
+    function hasAlreadyVoted(uint _index) internal view returns(bool) {
+        for (uint i = 0; i < votes[msg.sender].length; i++) {
+            if (votes[msg.sender][i] == _index) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function isMajorityVote(uint _index) internal view returns(bool){
         uint total = bPool.totalSupply();
-        return votes * 2 > total;
+        return proposals[_index].votes * 2 > total;
     }
 }

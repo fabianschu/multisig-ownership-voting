@@ -282,16 +282,16 @@ describe("Ballot", async () => {
         await expect(vote).to.be.revertedWith("B3");
       });
 
-      // it.only("should revert when caller created proposal", async () => {
-      //   await safeInstance.addProposal(
-      //     addOwnerProposal,
-      //     bob.address,
-      //     newThreshold
-      //   );
-      //   const doubleVote = safeInstance.vote(firstProposalIdx);
+      it("should revert when voter also created proposal (double vote)", async () => {
+        await safeInstance.addProposal(
+          addOwnerProposal,
+          bob.address,
+          newThreshold
+        );
+        const doubleVote = safeInstance.vote(firstProposalIdx);
 
-      //   await expect(doubleVote).to.be.revertedWith("B5");
-      // });
+        await expect(doubleVote).to.be.revertedWith("B5");
+      });
 
       // it("should revert when proposal is closed", async () => {
       //   const index = 0;
