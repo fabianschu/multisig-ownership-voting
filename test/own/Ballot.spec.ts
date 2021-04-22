@@ -187,25 +187,21 @@ describe("Ballot", async () => {
         aliceInitialBalance = await bPoolinstance.balanceOf(alice.address);
         bobInitialBalance = await bPoolinstance.balanceOf(bob.address);
         await bPoolinstance.approve(safeInstance.address, MAX);
-        await bPoolinstance.connect(bob).approve(safeInstance.address, MAX);
         await safeInstance.stake();
-        await safeInstance.connect(bob).stake();
+      });
+
+      it("should revert when caller is NOT staker", async () => {
         await safeInstance.addProposal(
           addOwnerProposal,
           bob.address,
           newThreshold
         );
+        const index = 0;
+        const vote = safeInstance.connect(carlos).vote(index);
+        await expect(vote).to.be.revertedWith("B2");
       });
 
-      describe("when caller is NOT staker", () => {
-        it("should revert", async () => {
-          const index = 0;
-          const vote = safeInstance.connect(carlos).vote(index);
-          await expect(vote).to.be.revertedWith("B2");
-        });
-      });
-
-      describe("when caller is staker", () => {
+      describe("when new vote pushes total votes over threshold", () => {
         const firstProposalIdx = 0;
         let type: BigNumber,
           address: string,
@@ -214,6 +210,13 @@ describe("Ballot", async () => {
           status: BigNumber;
 
         beforeEach(async () => {
+          await safeInstance.addProposal(
+            addOwnerProposal,
+            bob.address,
+            newThreshold
+          );
+          await bPoolinstance.connect(bob).approve(safeInstance.address, MAX);
+          await safeInstance.connect(bob).stake();
           await safeInstance.connect(bob).vote(firstProposalIdx);
           [
             type,
@@ -224,12 +227,16 @@ describe("Ballot", async () => {
           ] = await safeInstance.proposals(firstProposalIdx);
         });
 
-        it("should add votes to the proposal", async () => {
+        it.only("should add votes to the proposal", async () => {
           const expectedTotalVotes = aliceInitialBalance.add(bobInitialBalance);
           expect(votes).to.equal(expectedTotalVotes);
         });
 
-        it.only("should add an owner to the safe if threshold is reached", async () => {
+        it("should add an owner to the safe if threshold (50% of votes) is met", async () => {
+          expect(await safeInstance.isOwner(bob.address)).to.equal(true);
+        });
+
+        it("should add an owner to the safe if threshold (50% of votes) is met", async () => {
           expect(await safeInstance.isOwner(bob.address)).to.equal(true);
         });
       });
