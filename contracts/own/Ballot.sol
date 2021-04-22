@@ -21,9 +21,10 @@ contract Ballot is OwnerManager {
     }
 
     IERC20 internal bPool;
-    uint256 constant public MAX_INT = type(uint256).max;
-    mapping(address => uint) public stakes;
+    uint256 constant public MAX_INT = type(uint256).max;    
     uint public stakedAmount;
+    mapping(address => uint) public stakes;
+    Proposal[] public proposals;
 
     function setupPool(address _bPool) internal {
         bPool = IERC20(_bPool);
@@ -49,8 +50,9 @@ contract Ballot is OwnerManager {
         stakes[msg.sender] = 0;
     }
 
-    function addProposal() public onlyStaker {
-
+    function addProposal(uint _type, address _target) public onlyStaker {
+        Proposal memory proposal = Proposal(ProposalType(_type), _target);
+        proposals.push(proposal);
     }
     
     function addOwner(address _newOwner, uint _newThreshold) public {

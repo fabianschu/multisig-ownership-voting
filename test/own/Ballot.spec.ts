@@ -12,13 +12,13 @@ describe("Ballot", async () => {
     daiInstance: Contract,
     bPoolinstance: Contract,
     safeInstance: Contract;
-  let alice: SignerWithAddress, dido: SignerWithAddress;
+  let alice: SignerWithAddress, bob: SignerWithAddress, dido: SignerWithAddress;
 
   beforeEach(async () => {
     await deployments.fixture();
     ({
       contractInstances: { usdtInstance, daiInstance, bPoolinstance },
-      users: { alice, dido },
+      users: { alice, bob, dido },
     } = await setupBalancerPool());
     safeInstance = await getSafeWithOwners(
       [alice.address],
@@ -101,10 +101,27 @@ describe("Ballot", async () => {
 
   describe("proposing", () => {
     describe("#addProposal", () => {
-      describe("without being staker", () => {
-        it.only("should revert", async () => {
+      describe("when caller is NOT staker", () => {
+        it("should revert", async () => {
           const addProposal = safeInstance.addProposal();
           await expect(addProposal).to.be.revertedWith("B2");
+        });
+      });
+
+      describe("when caller is staker", () => {
+        const addOwnerProposal = 0;
+        const removeOwnerProposal = 1;
+
+        beforeEach(async () => {
+          await bPoolinstance.approve(safeInstance.address, MAX);
+          await safeInstance.stake();
+        });
+
+        it("should add a proposal", async () => {
+          await safeInstance.addProposal(addOwnerProposal, bob.address);
+          const addedProposal = await safeInstance.proposals(0);
+          expect(addedProposal[0]).to.equal(addOwnerProposal);
+          expect(addedProposal[1]).to.equal(bob.address);
         });
       });
     });
