@@ -4,8 +4,7 @@ import * as token from "../../../build/artifacts/contracts/balancer/test/TToken.
 import * as bpool from "../../../build/artifacts/contracts/balancer/BPool.sol/BPool.json";
 
 export const setupBalancerPool = async () => {
-  // const [alice, bob, carlos, dido, fred] = waffle.provider.getWallets();
-  const [alice, bob, carlos] = await ethers.getSigners();
+  const [alice, bob, carlos, dido] = await ethers.getSigners();
   const MAX = ethers.constants.MaxUint256;
   // set up token contracts
   const usdtInstance = await waffle.deployContract(alice, token, [
@@ -68,6 +67,6 @@ export const setupBalancerPool = async () => {
 
   return {
     contractInstances: { usdtInstance, daiInstance, bPoolinstance },
-    users: { alice, bob, carlos },
+    users: { alice, bob, carlos, dido },
   };
 };
