@@ -26,6 +26,11 @@ contract Ballot is OwnerManager {
         _;
     }
 
+    modifier activeProposal(uint _index) {
+        require(proposals[_index].owner != address(0), "B3");
+        _;
+    }
+
     IERC20 internal bPool;
     uint256 constant public MAX_INT = type(uint256).max;    
     uint public stakedAmount;
@@ -58,6 +63,8 @@ contract Ballot is OwnerManager {
     }
 
     function addProposal(uint _type, address _target, uint _newThreshold) public onlyStaker {
+        require(_target != address(0), "B4");
+
         Proposal memory proposal = Proposal(
             ProposalType(_type),
             _target,
@@ -70,17 +77,21 @@ contract Ballot is OwnerManager {
         numberProposals++;
     }
 
-    function vote(uint _index) public onlyStaker {
+    function vote(uint _index) public onlyStaker activeProposal(_index) {
         proposals[_index].votes += stakes[msg.sender];
-        bool majority = majorityReached(_index);
+        bool majority = isMajority(_index);
         if (majority) {
             uint newSafeThreshold = proposals[_index].newThreshold;
-            address newOwner = proposals[_index].owner;
-            addOwnerWithThreshold(newOwner, newSafeThreshold);
+            address elected = proposals[_index].owner;
+            if (proposals[_index].proposalType == ProposalType.addOwner) {
+                addOwnerWithThreshold(elected, newSafeThreshold);
+            }
+
+            proposals[_index].proposalStatus = ProposalStatus.closed;
         }
     }
 
-    function majorityReached(uint _index) internal view returns(bool){
+    function isMajority(uint _index) internal view returns(bool){
         uint votes = proposals[_index].votes;
         uint total = bPool.totalSupply();
         return votes * 2 > total;

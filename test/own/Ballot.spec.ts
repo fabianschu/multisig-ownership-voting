@@ -110,15 +110,13 @@ describe("Ballot", async () => {
     const newThreshold = 2;
 
     describe("#addProposal", () => {
-      describe("when caller is NOT staker", () => {
-        it("should revert", async () => {
-          const addProposal = safeInstance.addProposal(
-            addOwnerProposal,
-            bob.address,
-            newThreshold
-          );
-          await expect(addProposal).to.be.revertedWith("B2");
-        });
+      it("should revert when caller is NOT staker", async () => {
+        const addProposal = safeInstance.addProposal(
+          addOwnerProposal,
+          bob.address,
+          newThreshold
+        );
+        await expect(addProposal).to.be.revertedWith("B2");
       });
 
       describe("when caller is staker", () => {
@@ -126,6 +124,16 @@ describe("Ballot", async () => {
           aliceInitialBalance = await bPoolinstance.balanceOf(alice.address);
           await bPoolinstance.approve(safeInstance.address, MAX);
           await safeInstance.stake();
+        });
+
+        it("should revert if address is 0x00", async () => {
+          const addProposal = safeInstance.addProposal(
+            addOwnerProposal,
+            ethers.constants.AddressZero,
+            newThreshold
+          );
+
+          await expect(addProposal).to.be.revertedWith("B4");
         });
 
         it("should add a proposal", async () => {
@@ -201,6 +209,18 @@ describe("Ballot", async () => {
         await expect(vote).to.be.revertedWith("B2");
       });
 
+      it("should revert when proposal doesn't exist", async () => {
+        const index = 0;
+        const vote = safeInstance.vote(index);
+        await expect(vote).to.be.revertedWith("B3");
+      });
+
+      // it("should revert when proposal is closed", async () => {
+      //   const index = 0;
+      //   const vote = safeInstance.vote(index);
+      //   await expect(vote).to.be.revertedWith("B3");
+      // });
+
       describe("when new vote pushes total votes over threshold", () => {
         const firstProposalIdx = 0;
         let type: BigNumber,
@@ -227,17 +247,17 @@ describe("Ballot", async () => {
           ] = await safeInstance.proposals(firstProposalIdx);
         });
 
-        it.only("should add votes to the proposal", async () => {
+        it("should increase the votes for the proposal", async () => {
           const expectedTotalVotes = aliceInitialBalance.add(bobInitialBalance);
           expect(votes).to.equal(expectedTotalVotes);
         });
 
-        it("should add an owner to the safe if threshold (50% of votes) is met", async () => {
+        it("should add the new owner to the safe if threshold (50% of votes) is met", async () => {
           expect(await safeInstance.isOwner(bob.address)).to.equal(true);
         });
 
-        it("should add an owner to the safe if threshold (50% of votes) is met", async () => {
-          expect(await safeInstance.isOwner(bob.address)).to.equal(true);
+        it("should set the accepted proposal status to closed", async () => {
+          expect(status).to.equal(0);
         });
       });
     });
