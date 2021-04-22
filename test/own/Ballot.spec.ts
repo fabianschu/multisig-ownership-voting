@@ -8,7 +8,7 @@ describe("Ballot", async () => {
   beforeEach(async () => await deployments.fixture());
 
   describe("#getTotalVotes", () => {
-    it("should add a new owner", async () => {
+    it("should get the total number of tokens", async () => {
       const {
         contractInstances: { usdtInstance, daiInstance, bPoolinstance },
         users: { alice, bob, carlos },
@@ -18,7 +18,9 @@ describe("Ballot", async () => {
         bPoolinstance.address
       );
 
-      // expect(await safeInstance.isOwner(bob.address)).to.equal(true);
+      expect(await safeInstance.getTotalVotes()).to.equal(
+        await bPoolinstance.totalSupply()
+      );
     });
   });
 });

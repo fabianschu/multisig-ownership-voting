@@ -12,6 +12,18 @@ contract Ballot is OwnerManager {
         bPool = IBPool(_bPool);
     }
 
+    function getTotalVotes() public view returns(uint){
+        return bPool.totalSupply();
+    }
+
+    // getAcceptanceThreshold
+
+    // addProposal
+
+    // (check) isAuthorizedProposer
+
+    // 
+
     // add proposal logic:
     // if proposal to add owner is accepted addOwnerWithThreshold is called
     // if proposal to remove owner is accepted removeOwner is called
