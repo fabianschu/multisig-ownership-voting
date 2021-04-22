@@ -132,7 +132,7 @@ describe("Ballot", async () => {
           expect(safeInstance.votes(carlos.address, 0)).to.be.reverted;
         });
 
-        it.only("removes active votes from open proposal", async () => {
+        it("removes active votes from ONE open proposal", async () => {
           await safeInstance.connect(carlos).unstake();
           [
             type,
@@ -143,6 +143,23 @@ describe("Ballot", async () => {
           ] = await safeInstance.proposals(firstProposalIdx);
 
           expect(votes).to.equal(0);
+        });
+
+        it("removes active votes from TWO open proposals", async () => {
+          didoInitialBalance = await bPoolinstance.balanceOf(dido.address);
+          await bPoolinstance.connect(dido).approve(safeInstance.address, MAX);
+          await safeInstance.connect(dido).stake();
+          await safeInstance
+            .connect(dido)
+            .addProposal(addOwnerProposal, bob.address, newThreshold);
+          await safeInstance.connect(carlos).vote(secondProposalIdx);
+          await safeInstance.connect(carlos).unstake();
+          const firstProposal = await safeInstance.proposals(firstProposalIdx);
+          const secondProposal = await safeInstance.proposals(
+            secondProposalIdx
+          );
+          expect(firstProposal[3]).to.equal(0);
+          expect(secondProposal[3]).to.equal(didoInitialBalance);
         });
       });
     });
