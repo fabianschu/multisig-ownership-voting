@@ -101,7 +101,12 @@ describe("Ballot", async () => {
 
   describe("proposing", () => {
     describe("#addProposal", () => {
-      it("should add a proposal", () => {});
+      describe("without being staker", () => {
+        it.only("should revert", async () => {
+          const addProposal = safeInstance.addProposal();
+          await expect(addProposal).to.be.revertedWith("B2");
+        });
+      });
     });
   });
 });

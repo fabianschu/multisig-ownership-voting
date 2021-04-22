@@ -7,8 +7,21 @@ import "../primeBalancer/interfaces/IBPool.sol";
 import "./interfaces/IERC20.sol";
 
 contract Ballot is OwnerManager {
-    uint256 constant public MAX_INT = type(uint256).max;
+
+    enum ProposalType { addOwner, removeOwner }
+
+    struct Proposal {
+        ProposalType proposalType;
+        address owner;
+    }
+
+    modifier onlyStaker() {
+        require(stakes[msg.sender] != 0, "B2");
+        _;
+    }
+
     IERC20 internal bPool;
+    uint256 constant public MAX_INT = type(uint256).max;
     mapping(address => uint) public stakes;
     uint public stakedAmount;
 
@@ -25,16 +38,19 @@ contract Ballot is OwnerManager {
         require(allowance == MAX_INT, "B1");
 
         uint stakerBalance = bPool.balanceOf(msg.sender);
-        bool success = bPool.transferFrom(msg.sender, address(this), stakerBalance);
+        bPool.transferFrom(msg.sender, address(this), stakerBalance);
         stakes[msg.sender] = stakerBalance;
         stakedAmount += stakerBalance;
     }
     
-    function unstake() public {
-        require(stakes[msg.sender] != 0, "B2");
+    function unstake() public onlyStaker {
         bPool.transfer(msg.sender, stakes[msg.sender]);
         stakedAmount -= stakes[msg.sender];
         stakes[msg.sender] = 0;
+    }
+
+    function addProposal() public onlyStaker {
+
     }
     
     function addOwner(address _newOwner, uint _newThreshold) public {
