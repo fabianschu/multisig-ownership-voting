@@ -12,14 +12,17 @@ describe("Ballot", async () => {
     daiInstance: Contract,
     bPoolinstance: Contract,
     safeInstance: Contract;
-  let alice: SignerWithAddress, bob: SignerWithAddress, dido: SignerWithAddress;
+  let alice: SignerWithAddress,
+    bob: SignerWithAddress,
+    carlos: SignerWithAddress,
+    dido: SignerWithAddress;
   let aliceInitialBalance: BigNumber;
 
   beforeEach(async () => {
     await deployments.fixture();
     ({
       contractInstances: { usdtInstance, daiInstance, bPoolinstance },
-      users: { alice, bob, dido },
+      users: { alice, bob, carlos, dido },
     } = await setupBalancerPool());
     safeInstance = await getSafeWithOwners(
       [alice.address],
@@ -102,11 +105,11 @@ describe("Ballot", async () => {
   });
 
   describe("proposing", () => {
-    describe("#addProposal", () => {
-      const addOwnerProposal = 0;
-      const removeOwnerProposal = 1;
-      const newThreshold = 2;
+    const addOwnerProposal = 0;
+    const removeOwnerProposal = 1;
+    const newThreshold = 2;
 
+    describe("#addProposal", () => {
       describe("when caller is NOT staker", () => {
         it("should revert", async () => {
           const addProposal = safeInstance.addProposal(
@@ -158,12 +161,12 @@ describe("Ballot", async () => {
         });
 
         it("should emit an event", async () => {
+          const expectedIndex = 0;
           const addProposal = safeInstance.addProposal(
             addOwnerProposal,
             bob.address,
             newThreshold
           );
-          const expectedIndex = 0;
 
           await expect(addProposal)
             .to.emit(safeInstance, "ProposalAdded")
@@ -176,16 +179,47 @@ describe("Ballot", async () => {
         });
       });
     });
-  });
 
-  describe("voting", () => {
-    describe("when caller is NOT staker", () => {
-      it("should revert", async () => {
-        // const addProposal = safeInstance.addProposal(
-        //   addOwnerProposal,
-        //   bob.address
-        // );
-        // await expect(addProposal).to.be.revertedWith("B2");
+    describe("#vote", () => {
+      let bobInitialBalance: BigNumber;
+
+      beforeEach(async () => {
+        aliceInitialBalance = await bPoolinstance.balanceOf(alice.address);
+        bobInitialBalance = await bPoolinstance.balanceOf(bob.address);
+        await bPoolinstance.approve(safeInstance.address, MAX);
+        await bPoolinstance.connect(bob).approve(safeInstance.address, MAX);
+        await safeInstance.stake();
+        await safeInstance.connect(bob).stake();
+        await safeInstance.addProposal(
+          addOwnerProposal,
+          bob.address,
+          newThreshold
+        );
+      });
+
+      describe("when caller is NOT staker", () => {
+        it("should revert", async () => {
+          const index = 0;
+          const vote = safeInstance.connect(carlos).vote(index);
+          await expect(vote).to.be.revertedWith("B2");
+        });
+      });
+
+      describe("when caller is staker", () => {
+        it("should add votes to the proposal", async () => {
+          const expectedTotalVotes = aliceInitialBalance.add(bobInitialBalance);
+          const index = 0;
+          await safeInstance.connect(bob).vote(index);
+
+          const [
+            type,
+            address,
+            threshold,
+            votes,
+            status,
+          ] = await safeInstance.proposals(index);
+          expect(votes).to.equal(expectedTotalVotes);
+        });
       });
     });
   });

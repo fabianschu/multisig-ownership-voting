@@ -70,6 +70,12 @@ contract Ballot is OwnerManager {
         numberProposals++;
     }
 
+    function vote(uint _index) public onlyStaker {
+        console.log(proposals[_index].votes);
+        proposals[_index].votes += stakes[msg.sender];
+        console.log(proposals[_index].votes);
+    }
+
     function addOwner(address _newOwner, uint _newThreshold) public {
         addOwnerWithThreshold(_newOwner, _newThreshold);
     }
