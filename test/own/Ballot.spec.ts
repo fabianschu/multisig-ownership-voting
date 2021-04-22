@@ -293,12 +293,6 @@ describe("Ballot", async () => {
         await expect(doubleVote).to.be.revertedWith("B5");
       });
 
-      // it("should revert when proposal is closed", async () => {
-      //   const index = 0;
-      //   const vote = safeInstance.vote(index);
-      //   await expect(vote).to.be.revertedWith("B3");
-      // });
-
       describe("when new vote pushes total votes over threshold", () => {
         beforeEach(async () => {
           await safeInstance.addProposal(
@@ -329,6 +323,18 @@ describe("Ballot", async () => {
 
         it("should set the accepted proposal status to closed", async () => {
           expect(status).to.equal(closedProposal);
+        });
+
+        it("should revert additional voting attempts", async () => {
+          await bPoolinstance
+            .connect(carlos)
+            .approve(safeInstance.address, MAX);
+
+          await safeInstance.connect(carlos).stake();
+          const closedVote = safeInstance
+            .connect(carlos)
+            .vote(firstProposalIdx);
+          expect(closedVote).to.be.revertedWith("B3");
         });
       });
 

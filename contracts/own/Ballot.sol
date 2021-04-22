@@ -27,7 +27,9 @@ contract Ballot is OwnerManager {
     }
 
     modifier activeProposal(uint _index) {
+        console.log("activeProposal modifier");
         require(proposals[_index].owner != address(0), "B3");
+        require(proposals[_index].proposalStatus == ProposalStatus.open, "B3");
         _;
     }
 
@@ -104,6 +106,7 @@ contract Ballot is OwnerManager {
     }
 
     function hasAlreadyVoted(uint _index) internal view returns(bool) {
+        console.log("hasAlreadyVoted");
         for (uint i = 0; i < votes[msg.sender].length; i++) {
             if (votes[msg.sender][i] == _index) {
                 return true;
