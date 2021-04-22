@@ -29,28 +29,54 @@ describe("Ballot", async () => {
   describe("staking", () => {
     let aliceInitialBalance: BigNumber;
 
-    beforeEach(async () => {
-      aliceInitialBalance = await bPoolinstance.balanceOf(alice.address);
-      await bPoolinstance.approve(safeInstance.address, MAX);
-    });
-
     describe("#stake", () => {
-      it("should transfer Alice's token to Ballot", async () => {
-        await safeInstance.stake();
-        expect(await bPoolinstance.balanceOf(safeInstance.address)).to.equal(
-          aliceInitialBalance
-        );
+      describe("without approval", () => {
+        it("should revert if approval for MAX uint is missing", async () => {
+          const stake = safeInstance.stake();
+          await expect(stake).to.be.revertedWith("B1");
+        });
       });
 
-      it("should stake Alice's tokens", async () => {
-        await safeInstance.stake();
-        expect(await safeInstance.stakes(alice.address)).to.equal(
-          aliceInitialBalance
-        );
+      describe("with approval", () => {
+        beforeEach(async () => {
+          aliceInitialBalance = await bPoolinstance.balanceOf(alice.address);
+          await bPoolinstance.approve(safeInstance.address, MAX);
+        });
+
+        it("should transfer Alice's token to Ballot", async () => {
+          await safeInstance.stake();
+          expect(await bPoolinstance.balanceOf(safeInstance.address)).to.equal(
+            aliceInitialBalance
+          );
+        });
+
+        it("should update the register of stakes", async () => {
+          await safeInstance.stake();
+          expect(await safeInstance.stakes(alice.address)).to.equal(
+            aliceInitialBalance
+          );
+        });
+
+        it("should increase the staked amount", async () => {
+          await safeInstance.stake();
+          expect(await safeInstance.stakedAmount()).to.equal(
+            aliceInitialBalance
+          );
+        });
       });
     });
 
     describe("#unstake", () => {
+      beforeEach(async () => {
+        aliceInitialBalance = await bPoolinstance.balanceOf(alice.address);
+        await bPoolinstance.approve(safeInstance.address, MAX);
+      });
+
+      it("should revert if caller is not staker", async () => {
+        const unstake = safeInstance.unstake();
+        await expect(unstake).to.be.revertedWith("B2");
+      });
+
       it("should transfer tokens back to Alice if called by Alice", async () => {
         await safeInstance.stake();
         await safeInstance.unstake();
@@ -59,9 +85,16 @@ describe("Ballot", async () => {
         );
       });
 
-      it("should revert if caller is not staker", async () => {
-        const unstake = safeInstance.unstake();
-        await expect(unstake).to.be.revertedWith("B1");
+      it("should update the register of stakes", async () => {
+        await safeInstance.stake();
+        await safeInstance.unstake();
+        expect(await safeInstance.stakes(alice.address)).to.equal(0);
+      });
+
+      it("should decrease the staked amount", async () => {
+        await safeInstance.stake();
+        await safeInstance.unstake();
+        expect(await safeInstance.stakedAmount()).to.equal(0);
       });
     });
   });
