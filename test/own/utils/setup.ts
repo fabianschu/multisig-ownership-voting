@@ -58,12 +58,12 @@ export const setupBalancerPool = async () => {
   // bob joins pool
   await bPoolinstance
     .connect(bob)
-    .joinPool(ethers.utils.parseEther("5"), [MAX, MAX]);
+    .joinPool(ethers.utils.parseEther("100"), [MAX, MAX]);
 
   // alice joins pool
   await bPoolinstance
     .connect(carlos)
-    .joinPool(ethers.utils.parseEther("5"), [MAX, MAX]);
+    .joinPool(ethers.utils.parseEther("100"), [MAX, MAX]);
 
   return {
     contractInstances: { usdtInstance, daiInstance, bPoolinstance },

@@ -206,19 +206,31 @@ describe("Ballot", async () => {
       });
 
       describe("when caller is staker", () => {
-        it("should add votes to the proposal", async () => {
-          const expectedTotalVotes = aliceInitialBalance.add(bobInitialBalance);
-          const index = 0;
-          await safeInstance.connect(bob).vote(index);
+        const firstProposalIdx = 0;
+        let type: BigNumber,
+          address: string,
+          threshold: BigNumber,
+          votes: BigNumber,
+          status: BigNumber;
 
-          const [
+        beforeEach(async () => {
+          await safeInstance.connect(bob).vote(firstProposalIdx);
+          [
             type,
             address,
             threshold,
             votes,
             status,
-          ] = await safeInstance.proposals(index);
+          ] = await safeInstance.proposals(firstProposalIdx);
+        });
+
+        it("should add votes to the proposal", async () => {
+          const expectedTotalVotes = aliceInitialBalance.add(bobInitialBalance);
           expect(votes).to.equal(expectedTotalVotes);
+        });
+
+        it.only("should add an owner to the safe if threshold is reached", async () => {
+          expect(await safeInstance.isOwner(bob.address)).to.equal(true);
         });
       });
     });

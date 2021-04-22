@@ -71,12 +71,18 @@ contract Ballot is OwnerManager {
     }
 
     function vote(uint _index) public onlyStaker {
-        console.log(proposals[_index].votes);
         proposals[_index].votes += stakes[msg.sender];
-        console.log(proposals[_index].votes);
+        bool majority = majorityReached(_index);
+        if (majority) {
+            uint newSafeThreshold = proposals[_index].newThreshold;
+            address newOwner = proposals[_index].owner;
+            addOwnerWithThreshold(newOwner, newSafeThreshold);
+        }
     }
 
-    function addOwner(address _newOwner, uint _newThreshold) public {
-        addOwnerWithThreshold(_newOwner, _newThreshold);
+    function majorityReached(uint _index) internal view returns(bool){
+        uint votes = proposals[_index].votes;
+        uint total = bPool.totalSupply();
+        return votes * 2 > total;
     }
 }
