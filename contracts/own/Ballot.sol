@@ -78,13 +78,13 @@ contract Ballot is OwnerManager {
             ProposalType(_type),
             _target,
             _newThreshold,
-            stakes[msg.sender],
+            0,
             ProposalStatus.open
         );
     
         emit ProposalAdded(numberProposals, _type, _target, _newThreshold);
         proposals[numberProposals] = proposal;
-        votes[msg.sender].push(numberProposals);
+        vote(numberProposals);
         numberProposals++;
     }
 
