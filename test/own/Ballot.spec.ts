@@ -14,7 +14,10 @@ const openProposal = 1;
 const closedProposal = 0;
 
 describe("Ballot", async () => {
-  let bPoolinstance: Contract, safeInstance: Contract;
+  let bPoolinstance: Contract,
+    safeInstance: Contract,
+    usdtInstance: Contract,
+    daiInstance: Contract;
   let alice: SignerWithAddress,
     bob: SignerWithAddress,
     carlos: SignerWithAddress,
@@ -162,7 +165,7 @@ describe("Ballot", async () => {
           expect(secondProposal[3]).to.equal(didoInitialBalance);
         });
 
-        it.only("should NOT remove active votes from closed proposal", async () => {
+        it("should NOT remove active votes from closed proposal", async () => {
           aliceInitialBalance = await bPoolinstance.balanceOf(alice.address);
           bobInitialBalance = await bPoolinstance.balanceOf(bob.address);
           await safeInstance.stake();
@@ -187,7 +190,7 @@ describe("Ballot", async () => {
     });
   });
 
-  describe("proposing", () => {
+  describe("proposing/voting process", () => {
     const newThreshold = 2;
 
     describe("#addProposal", () => {
@@ -277,6 +280,15 @@ describe("Ballot", async () => {
           );
         });
       });
+
+      // describe("when proposer is majority staker", async () => {
+      //   beforeEach(async () => {
+      //     aliceInitialBalance = await bPoolinstance.balanceOf(alice.address);
+      //     bobInitialBalance = await bPoolinstance.balanceOf(bob.address);
+      //     await bPoolinstance.approve(safeInstance.address, MAX);
+      //     await safeInstance.stake();
+      //   });
+      // });
     });
 
     describe("#vote", () => {
@@ -287,123 +299,151 @@ describe("Ballot", async () => {
         await safeInstance.stake();
       });
 
-      it("should revert when caller is NOT staker", async () => {
-        await safeInstance.addProposal(
-          addOwnerProposal,
-          bob.address,
-          newThreshold
-        );
-        const index = 0;
-        const vote = safeInstance.connect(carlos).vote(index);
-        await expect(vote).to.be.revertedWith("B2");
-      });
-
-      it("should revert when proposal doesn't exist", async () => {
-        const index = 0;
-        const vote = safeInstance.vote(index);
-        await expect(vote).to.be.revertedWith("B3");
-      });
-
-      it("should revert when voter also created proposal (double vote)", async () => {
-        await safeInstance.addProposal(
-          addOwnerProposal,
-          bob.address,
-          newThreshold
-        );
-        const doubleVote = safeInstance.vote(firstProposalIdx);
-
-        await expect(doubleVote).to.be.revertedWith("B5");
-      });
-
-      describe("when new vote pushes total votes over threshold", () => {
-        beforeEach(async () => {
+      describe("addOwner proposal", () => {
+        it("should revert when caller is NOT staker", async () => {
           await safeInstance.addProposal(
             addOwnerProposal,
             bob.address,
             newThreshold
           );
-          await bPoolinstance.connect(bob).approve(safeInstance.address, MAX);
-          await safeInstance.connect(bob).stake();
-          await safeInstance.connect(bob).vote(firstProposalIdx);
-          [
-            type,
-            address,
-            threshold,
-            votes,
-            status,
-          ] = await safeInstance.proposals(firstProposalIdx);
+          const index = 0;
+          const vote = safeInstance.connect(carlos).vote(index);
+          await expect(vote).to.be.revertedWith("B2");
         });
 
-        it("should increase the votes for the proposal", async () => {
-          const expectedTotalVotes = aliceInitialBalance.add(bobInitialBalance);
-          expect(votes).to.equal(expectedTotalVotes);
+        it("should revert when proposal doesn't exist", async () => {
+          const index = 0;
+          const vote = safeInstance.vote(index);
+          await expect(vote).to.be.revertedWith("B3");
         });
 
-        it("should add the new owner to the safe", async () => {
-          expect(await safeInstance.isOwner(bob.address)).to.equal(true);
+        it("should revert when voter also created proposal (double vote)", async () => {
+          await safeInstance.addProposal(
+            addOwnerProposal,
+            bob.address,
+            newThreshold
+          );
+          const doubleVote = safeInstance.vote(firstProposalIdx);
+
+          await expect(doubleVote).to.be.revertedWith("B5");
         });
 
-        it("should set the accepted proposal status to closed", async () => {
-          expect(status).to.equal(closedProposal);
+        describe("when new vote pushes total votes over threshold", () => {
+          beforeEach(async () => {
+            await safeInstance.addProposal(
+              addOwnerProposal,
+              bob.address,
+              newThreshold
+            );
+            await bPoolinstance.connect(bob).approve(safeInstance.address, MAX);
+            await safeInstance.connect(bob).stake();
+            await safeInstance.connect(bob).vote(firstProposalIdx);
+            [
+              type,
+              address,
+              threshold,
+              votes,
+              status,
+            ] = await safeInstance.proposals(firstProposalIdx);
+          });
+
+          it("should increase the votes for the proposal", async () => {
+            const expectedTotalVotes = aliceInitialBalance.add(
+              bobInitialBalance
+            );
+            expect(votes).to.equal(expectedTotalVotes);
+          });
+
+          it("should add the new owner to the safe", async () => {
+            expect(await safeInstance.isOwner(bob.address)).to.equal(true);
+          });
+
+          it("should set the accepted proposal status to closed", async () => {
+            expect(status).to.equal(closedProposal);
+          });
+
+          it("should revert additional voting attempts", async () => {
+            await bPoolinstance
+              .connect(carlos)
+              .approve(safeInstance.address, MAX);
+
+            await safeInstance.connect(carlos).stake();
+            const closedVote = safeInstance
+              .connect(carlos)
+              .vote(firstProposalIdx);
+            expect(closedVote).to.be.revertedWith("B3");
+          });
         });
 
-        it("should revert additional voting attempts", async () => {
-          await bPoolinstance
-            .connect(carlos)
-            .approve(safeInstance.address, MAX);
+        describe("when new vote DOES NOT push total votes over threshold", () => {
+          beforeEach(async () => {
+            carlosInitialBalance = await bPoolinstance.balanceOf(
+              carlos.address
+            );
+            didoInitialBalance = await bPoolinstance.balanceOf(dido.address);
+            await bPoolinstance
+              .connect(carlos)
+              .approve(safeInstance.address, MAX);
+            await safeInstance.connect(carlos).stake();
+            await safeInstance
+              .connect(carlos)
+              .addProposal(addOwnerProposal, bob.address, newThreshold);
+            await bPoolinstance
+              .connect(dido)
+              .approve(safeInstance.address, MAX);
+            await safeInstance.connect(dido).stake();
+            await safeInstance.connect(dido).vote(firstProposalIdx);
+            [
+              type,
+              address,
+              threshold,
+              votes,
+              status,
+            ] = await safeInstance.proposals(firstProposalIdx);
+          });
 
-          await safeInstance.connect(carlos).stake();
-          const closedVote = safeInstance
-            .connect(carlos)
-            .vote(firstProposalIdx);
-          expect(closedVote).to.be.revertedWith("B3");
+          it("should increase the votes for the proposal", async () => {
+            const expectedTotalVotes = carlosInitialBalance.add(
+              didoInitialBalance
+            );
+            expect(votes).to.equal(expectedTotalVotes);
+          });
+
+          it("should NOT add the new owner to the safe", async () => {
+            expect(await safeInstance.isOwner(bob.address)).to.equal(false);
+          });
+
+          it("should set the proposal status to open", async () => {
+            expect(status).to.equal(openProposal);
+          });
+
+          it("should register that voter has voted for proposal (voter side)", async () => {
+            expect(await safeInstance.votes(dido.address, 0)).to.equal(
+              firstProposalIdx
+            );
+          });
         });
       });
 
-      describe("when new vote DOES NOT push total votes over threshold", () => {
-        beforeEach(async () => {
-          carlosInitialBalance = await bPoolinstance.balanceOf(carlos.address);
-          didoInitialBalance = await bPoolinstance.balanceOf(dido.address);
-          await bPoolinstance
-            .connect(carlos)
-            .approve(safeInstance.address, MAX);
-          await safeInstance.connect(carlos).stake();
-          await safeInstance
-            .connect(carlos)
-            .addProposal(addOwnerProposal, bob.address, newThreshold);
-          await bPoolinstance.connect(dido).approve(safeInstance.address, MAX);
-          await safeInstance.connect(dido).stake();
-          await safeInstance.connect(dido).vote(firstProposalIdx);
-          [
-            type,
-            address,
-            threshold,
-            votes,
-            status,
-          ] = await safeInstance.proposals(firstProposalIdx);
-        });
-
-        it("should increase the votes for the proposal", async () => {
-          const expectedTotalVotes = carlosInitialBalance.add(
-            didoInitialBalance
-          );
-          expect(votes).to.equal(expectedTotalVotes);
-        });
-
-        it("should NOT add the new owner to the safe", async () => {
-          expect(await safeInstance.isOwner(bob.address)).to.equal(false);
-        });
-
-        it("should set the proposal status to open", async () => {
-          expect(status).to.equal(openProposal);
-        });
-
-        it("should register that voter has voted for proposal (voter side)", async () => {
-          expect(await safeInstance.votes(dido.address, 0)).to.equal(
-            firstProposalIdx
-          );
-        });
-      });
+      // describe("removeOwner proposal", () => {
+      //   beforeEach(async () => {
+      //     await safeInstance.addProposal(
+      //       addOwnerProposal,
+      //       bob.address,
+      //       newThreshold
+      //     );
+      //     await bPoolinstance.connect(bob).approve(safeInstance.address, MAX);
+      //     await safeInstance.connect(bob).stake();
+      //     await safeInstance.connect(bob).vote(firstProposalIdx);
+      //     [
+      //       type,
+      //       address,
+      //       threshold,
+      //       votes,
+      //       status,
+      //     ] = await safeInstance.proposals(firstProposalIdx);
+      //   });
+      // });
     });
   });
 });
