@@ -37,6 +37,7 @@ contract Ballot is OwnerManager {
     mapping(address => uint) public stakes;
     uint public numberProposals;
     mapping(uint => Proposal) public proposals;
+    mapping(address => uint[]) public votes;
 
     function setupPool(address _bPool) internal {
         bPool = IERC20(_bPool);
@@ -74,6 +75,7 @@ contract Ballot is OwnerManager {
         );
         emit ProposalAdded(numberProposals, _type, _target, _newThreshold);
         proposals[numberProposals] = proposal;
+        votes[msg.sender].push(numberProposals);
         numberProposals++;
     }
 
@@ -88,6 +90,8 @@ contract Ballot is OwnerManager {
             }
 
             proposals[_index].proposalStatus = ProposalStatus.closed;
+        } else {
+            votes[msg.sender].push(_index);
         }
     }
 

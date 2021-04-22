@@ -6,23 +6,36 @@ import { BigNumber, Contract } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 
 const MAX = ethers.constants.MaxUint256;
-// const [owner, alice, bob] = await ethers.getSigners();
+const firstProposalIdx = 0;
+const secondProposalIdx = 1;
+const addOwnerProposal = 0;
+const removeOwnerProposal = 1;
+const openProposal = 1;
+const closedProposal = 0;
+
 describe("Ballot", async () => {
-  let usdtInstance: Contract,
-    daiInstance: Contract,
-    bPoolinstance: Contract,
-    safeInstance: Contract;
+  let bPoolinstance: Contract, safeInstance: Contract;
   let alice: SignerWithAddress,
     bob: SignerWithAddress,
     carlos: SignerWithAddress,
-    dido: SignerWithAddress;
-  let aliceInitialBalance: BigNumber;
+    dido: SignerWithAddress,
+    eddie: SignerWithAddress;
+  let aliceInitialBalance: BigNumber,
+    bobInitialBalance: BigNumber,
+    carlosInitialBalance: BigNumber,
+    didoInitialBalance: BigNumber;
+
+  let type: BigNumber,
+    address: string,
+    threshold: BigNumber,
+    votes: BigNumber,
+    status: BigNumber;
 
   beforeEach(async () => {
     await deployments.fixture();
     ({
-      contractInstances: { usdtInstance, daiInstance, bPoolinstance },
-      users: { alice, bob, carlos, dido },
+      contractInstances: { bPoolinstance },
+      users: { alice, bob, carlos, dido, eddie },
     } = await setupBalancerPool());
     safeInstance = await getSafeWithOwners(
       [alice.address],
@@ -74,11 +87,9 @@ describe("Ballot", async () => {
         await bPoolinstance.approve(safeInstance.address, MAX);
       });
 
-      describe("caller is NOT staker", () => {
-        it("should revert if caller is not staker", async () => {
-          const unstake = safeInstance.unstake();
-          await expect(unstake).to.be.revertedWith("B2");
-        });
+      it("should revert if caller is not staker", async () => {
+        const unstake = safeInstance.unstake();
+        await expect(unstake).to.be.revertedWith("B2");
       });
 
       describe("caller is staker", () => {
@@ -101,12 +112,34 @@ describe("Ballot", async () => {
           expect(await safeInstance.stakedAmount()).to.equal(0);
         });
       });
+
+      // describe("caller has active votes (created proposal and voted)", async () => {
+      //   const newThreshold = 2;
+
+      //   beforeEach(async () => {
+      //     await bPoolinstance
+      //       .connect(carlos)
+      //       .approve(safeInstance.address, MAX);
+      //     await safeInstance.connect(carlos).stake();
+      //     await safeInstance
+      //       .connect(carlos)
+      //       .addProposal(addOwnerProposal, bob.address, newThreshold);
+
+      //     await bPoolinstance.connect(dido).approve(safeInstance.address, MAX);
+      //     await safeInstance.connect(dido).stake();
+      //     await safeInstance
+      //       .connect(dido)
+      //       .addProposal(addOwnerProposal, eddie.address, newThreshold);
+
+      //     await safeInstance.connect(carlos).vote(secondProposalIdx);
+      //   });
+
+      //   it("removes all active votes", () => {});
+      // });
     });
   });
 
   describe("proposing", () => {
-    const addOwnerProposal = 0;
-    const removeOwnerProposal = 1;
     const newThreshold = 2;
 
     describe("#addProposal", () => {
@@ -149,13 +182,12 @@ describe("Ballot", async () => {
             votes,
             status,
           ] = await safeInstance.proposals(0);
-          const proposalStatusOpen = 1;
 
           expect(type).to.equal(addOwnerProposal);
           expect(address).to.equal(bob.address);
           expect(threshold).to.equal(newThreshold);
           expect(votes).to.equal(aliceInitialBalance);
-          expect(status).to.equal(proposalStatusOpen);
+          expect(status).to.equal(openProposal);
         });
 
         it("should increment the number of proposals", async () => {
@@ -185,12 +217,21 @@ describe("Ballot", async () => {
               newThreshold
             );
         });
+
+        it("should register that caller has voted for proposal", async () => {
+          await safeInstance.addProposal(
+            addOwnerProposal,
+            bob.address,
+            newThreshold
+          );
+          expect(await safeInstance.votes(alice.address, 0)).to.equal(
+            firstProposalIdx
+          );
+        });
       });
     });
 
     describe("#vote", () => {
-      let bobInitialBalance: BigNumber;
-
       beforeEach(async () => {
         aliceInitialBalance = await bPoolinstance.balanceOf(alice.address);
         bobInitialBalance = await bPoolinstance.balanceOf(bob.address);
@@ -215,6 +256,17 @@ describe("Ballot", async () => {
         await expect(vote).to.be.revertedWith("B3");
       });
 
+      // it.only("should revert when caller created proposal", async () => {
+      //   await safeInstance.addProposal(
+      //     addOwnerProposal,
+      //     bob.address,
+      //     newThreshold
+      //   );
+      //   const doubleVote = safeInstance.vote(firstProposalIdx);
+
+      //   await expect(doubleVote).to.be.revertedWith("B5");
+      // });
+
       // it("should revert when proposal is closed", async () => {
       //   const index = 0;
       //   const vote = safeInstance.vote(index);
@@ -222,13 +274,6 @@ describe("Ballot", async () => {
       // });
 
       describe("when new vote pushes total votes over threshold", () => {
-        const firstProposalIdx = 0;
-        let type: BigNumber,
-          address: string,
-          threshold: BigNumber,
-          votes: BigNumber,
-          status: BigNumber;
-
         beforeEach(async () => {
           await safeInstance.addProposal(
             addOwnerProposal,
@@ -252,12 +297,61 @@ describe("Ballot", async () => {
           expect(votes).to.equal(expectedTotalVotes);
         });
 
-        it("should add the new owner to the safe if threshold (50% of votes) is met", async () => {
+        it("should add the new owner to the safe", async () => {
           expect(await safeInstance.isOwner(bob.address)).to.equal(true);
         });
 
         it("should set the accepted proposal status to closed", async () => {
-          expect(status).to.equal(0);
+          expect(status).to.equal(closedProposal);
+        });
+
+        // it("should remove the accepted proposal from vote register of voter", async () => {
+        //   expect(status).to.equal(closedProposal);
+        // });
+      });
+
+      describe("when new vote DOES NOT push total votes over threshold", () => {
+        beforeEach(async () => {
+          carlosInitialBalance = await bPoolinstance.balanceOf(carlos.address);
+          didoInitialBalance = await bPoolinstance.balanceOf(dido.address);
+          await bPoolinstance
+            .connect(carlos)
+            .approve(safeInstance.address, MAX);
+          await safeInstance.connect(carlos).stake();
+          await safeInstance
+            .connect(carlos)
+            .addProposal(addOwnerProposal, bob.address, newThreshold);
+          await bPoolinstance.connect(dido).approve(safeInstance.address, MAX);
+          await safeInstance.connect(dido).stake();
+          await safeInstance.connect(dido).vote(firstProposalIdx);
+          [
+            type,
+            address,
+            threshold,
+            votes,
+            status,
+          ] = await safeInstance.proposals(firstProposalIdx);
+        });
+
+        it("should increase the votes for the proposal", async () => {
+          const expectedTotalVotes = carlosInitialBalance.add(
+            didoInitialBalance
+          );
+          expect(votes).to.equal(expectedTotalVotes);
+        });
+
+        it("should NOT add the new owner to the safe", async () => {
+          expect(await safeInstance.isOwner(bob.address)).to.equal(false);
+        });
+
+        it("should set the proposal status to open", async () => {
+          expect(status).to.equal(openProposal);
+        });
+
+        it("should register that voter has voted for proposal", async () => {
+          expect(await safeInstance.votes(dido.address, 0)).to.equal(
+            firstProposalIdx
+          );
         });
       });
     });
