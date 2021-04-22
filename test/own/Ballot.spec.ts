@@ -8,42 +8,28 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-wit
 const MAX = ethers.constants.MaxUint256;
 // const [owner, alice, bob] = await ethers.getSigners();
 describe("Ballot", async () => {
-  beforeEach(async () => await deployments.fixture());
+  let usdtInstance: Contract,
+    daiInstance: Contract,
+    bPoolinstance: Contract,
+    safeInstance: Contract;
+  let alice: SignerWithAddress, dido: SignerWithAddress;
 
-  describe("#getTotalVotes", () => {
-    it("should get the total number of tokens", async () => {
-      const {
-        contractInstances: { usdtInstance, daiInstance, bPoolinstance },
-        users: { alice, bob, carlos },
-      } = await setupBalancerPool();
-      const safeInstance = await getSafeWithOwners(
-        [alice.address],
-        bPoolinstance.address
-      );
-
-      expect(await safeInstance.getTotalVotes()).to.equal(
-        await bPoolinstance.totalSupply()
-      );
-    });
+  beforeEach(async () => {
+    await deployments.fixture();
+    ({
+      contractInstances: { usdtInstance, daiInstance, bPoolinstance },
+      users: { alice, dido },
+    } = await setupBalancerPool());
+    safeInstance = await getSafeWithOwners(
+      [alice.address],
+      bPoolinstance.address
+    );
   });
 
-  describe("staking the balancer tokens", () => {
-    let usdtInstance: Contract,
-      daiInstance: Contract,
-      bPoolinstance: Contract,
-      safeInstance: Contract;
-    let alice: SignerWithAddress, dido: SignerWithAddress;
+  describe("staking", () => {
     let aliceInitialBalance: BigNumber;
 
     beforeEach(async () => {
-      ({
-        contractInstances: { usdtInstance, daiInstance, bPoolinstance },
-        users: { alice, dido },
-      } = await setupBalancerPool());
-      safeInstance = await getSafeWithOwners(
-        [alice.address],
-        bPoolinstance.address
-      );
       aliceInitialBalance = await bPoolinstance.balanceOf(alice.address);
       await bPoolinstance.approve(safeInstance.address, MAX);
     });
@@ -73,25 +59,16 @@ describe("Ballot", async () => {
         );
       });
 
-      it.only("should revert if caller is not staker", async () => {
+      it("should revert if caller is not staker", async () => {
         const unstake = safeInstance.unstake();
         await expect(unstake).to.be.revertedWith("B1");
       });
+    });
+  });
 
-      // it("should stake Alice's tokens", async () => {
-      //   const {
-      //     contractInstances: { usdtInstance, daiInstance, bPoolinstance },
-      //     users: { alice, dido },
-      //   } = await setupBalancerPool();
-      //   const safeInstance = await getSafeWithOwners(
-      //     [alice.address],
-      //     bPoolinstance.address
-      //   );
-      //   const aliceBalance = await bPoolinstance.balanceOf(alice.address);
-      //   await bPoolinstance.approve(safeInstance.address, MAX);
-      //   await safeInstance.stake();
-      //   expect(await safeInstance.stakes(alice.address)).to.equal(aliceBalance);
-      // });
+  describe("proposing", () => {
+    describe("#addProposal", () => {
+      it("should add a proposal", () => {});
     });
   });
 });
