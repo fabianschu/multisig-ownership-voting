@@ -9,11 +9,17 @@ import "./interfaces/IERC20.sol";
 contract Ballot is OwnerManager {
 
     enum ProposalType { addOwner, removeOwner }
+    enum ProposalStatus { closed, open }
 
     struct Proposal {
         ProposalType proposalType;
         address owner;
+        uint newThreshold;
+        uint votes;
+        ProposalStatus proposalStatus;
     }
+
+    event ProposalAdded (uint index, uint proposalType, address target, uint newThreshold);
 
     modifier onlyStaker() {
         require(stakes[msg.sender] != 0, "B2");
@@ -24,7 +30,8 @@ contract Ballot is OwnerManager {
     uint256 constant public MAX_INT = type(uint256).max;    
     uint public stakedAmount;
     mapping(address => uint) public stakes;
-    Proposal[] public proposals;
+    uint public numberProposals;
+    mapping(uint => Proposal) public proposals;
 
     function setupPool(address _bPool) internal {
         bPool = IERC20(_bPool);
@@ -50,11 +57,19 @@ contract Ballot is OwnerManager {
         stakes[msg.sender] = 0;
     }
 
-    function addProposal(uint _type, address _target) public onlyStaker {
-        Proposal memory proposal = Proposal(ProposalType(_type), _target);
-        proposals.push(proposal);
+    function addProposal(uint _type, address _target, uint _newThreshold) public onlyStaker {
+        Proposal memory proposal = Proposal(
+            ProposalType(_type),
+            _target,
+            _newThreshold,
+            stakes[msg.sender],
+            ProposalStatus.open
+        );
+        emit ProposalAdded(numberProposals, _type, _target, _newThreshold);
+        proposals[numberProposals] = proposal;
+        numberProposals++;
     }
-    
+
     function addOwner(address _newOwner, uint _newThreshold) public {
         addOwnerWithThreshold(_newOwner, _newThreshold);
     }

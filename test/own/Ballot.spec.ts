@@ -13,6 +13,7 @@ describe("Ballot", async () => {
     bPoolinstance: Contract,
     safeInstance: Contract;
   let alice: SignerWithAddress, bob: SignerWithAddress, dido: SignerWithAddress;
+  let aliceInitialBalance: BigNumber;
 
   beforeEach(async () => {
     await deployments.fixture();
@@ -27,8 +28,6 @@ describe("Ballot", async () => {
   });
 
   describe("staking", () => {
-    let aliceInitialBalance: BigNumber;
-
     describe("#stake", () => {
       describe("without approval", () => {
         it("should revert if approval for MAX uint is missing", async () => {
@@ -72,57 +71,121 @@ describe("Ballot", async () => {
         await bPoolinstance.approve(safeInstance.address, MAX);
       });
 
-      it("should revert if caller is not staker", async () => {
-        const unstake = safeInstance.unstake();
-        await expect(unstake).to.be.revertedWith("B2");
+      describe("caller is NOT staker", () => {
+        it("should revert if caller is not staker", async () => {
+          const unstake = safeInstance.unstake();
+          await expect(unstake).to.be.revertedWith("B2");
+        });
       });
 
-      it("should transfer tokens back to Alice if called by Alice", async () => {
-        await safeInstance.stake();
-        await safeInstance.unstake();
-        expect(await bPoolinstance.balanceOf(alice.address)).to.equal(
-          aliceInitialBalance
-        );
-      });
+      describe("caller is staker", () => {
+        beforeEach(async () => {
+          await safeInstance.stake();
+          await safeInstance.unstake();
+        });
 
-      it("should update the register of stakes", async () => {
-        await safeInstance.stake();
-        await safeInstance.unstake();
-        expect(await safeInstance.stakes(alice.address)).to.equal(0);
-      });
+        it("should transfer tokens back to Alice if called by Alice", async () => {
+          expect(await bPoolinstance.balanceOf(alice.address)).to.equal(
+            aliceInitialBalance
+          );
+        });
 
-      it("should decrease the staked amount", async () => {
-        await safeInstance.stake();
-        await safeInstance.unstake();
-        expect(await safeInstance.stakedAmount()).to.equal(0);
+        it("should update the register of stakes", async () => {
+          expect(await safeInstance.stakes(alice.address)).to.equal(0);
+        });
+
+        it("should decrease the staked amount", async () => {
+          expect(await safeInstance.stakedAmount()).to.equal(0);
+        });
       });
     });
   });
 
   describe("proposing", () => {
     describe("#addProposal", () => {
+      const addOwnerProposal = 0;
+      const removeOwnerProposal = 1;
+      const newThreshold = 2;
+
       describe("when caller is NOT staker", () => {
         it("should revert", async () => {
-          const addProposal = safeInstance.addProposal();
+          const addProposal = safeInstance.addProposal(
+            addOwnerProposal,
+            bob.address,
+            newThreshold
+          );
           await expect(addProposal).to.be.revertedWith("B2");
         });
       });
 
       describe("when caller is staker", () => {
-        const addOwnerProposal = 0;
-        const removeOwnerProposal = 1;
-
         beforeEach(async () => {
+          aliceInitialBalance = await bPoolinstance.balanceOf(alice.address);
           await bPoolinstance.approve(safeInstance.address, MAX);
           await safeInstance.stake();
         });
 
         it("should add a proposal", async () => {
-          await safeInstance.addProposal(addOwnerProposal, bob.address);
-          const addedProposal = await safeInstance.proposals(0);
-          expect(addedProposal[0]).to.equal(addOwnerProposal);
-          expect(addedProposal[1]).to.equal(bob.address);
+          await safeInstance.addProposal(
+            addOwnerProposal,
+            bob.address,
+            newThreshold
+          );
+          const [
+            type,
+            address,
+            threshold,
+            votes,
+            status,
+          ] = await safeInstance.proposals(0);
+          const proposalStatusOpen = 1;
+
+          expect(type).to.equal(addOwnerProposal);
+          expect(address).to.equal(bob.address);
+          expect(threshold).to.equal(newThreshold);
+          expect(votes).to.equal(aliceInitialBalance);
+          expect(status).to.equal(proposalStatusOpen);
         });
+
+        it("should increment the number of proposals", async () => {
+          await safeInstance.addProposal(
+            addOwnerProposal,
+            bob.address,
+            newThreshold
+          );
+
+          expect(await safeInstance.numberProposals()).to.equal(1);
+        });
+
+        it("should emit an event", async () => {
+          const addProposal = safeInstance.addProposal(
+            addOwnerProposal,
+            bob.address,
+            newThreshold
+          );
+          const expectedIndex = 0;
+
+          await expect(addProposal)
+            .to.emit(safeInstance, "ProposalAdded")
+            .withArgs(
+              expectedIndex,
+              addOwnerProposal,
+              bob.address,
+              newThreshold
+            );
+        });
+      });
+    });
+  });
+
+  describe("voting", () => {
+    describe("when caller is NOT staker", () => {
+      it("should revert", async () => {
+        // const addProposal = safeInstance.addProposal(
+        //   addOwnerProposal,
+        //   bob.address
+        // );
+        // await expect(addProposal).to.be.revertedWith("B2");
       });
     });
   });
