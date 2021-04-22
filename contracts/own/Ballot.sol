@@ -17,7 +17,6 @@ contract Ballot is OwnerManager {
         uint newThreshold;
         uint votes;
         ProposalStatus proposalStatus;
-        address[] voters;
     }
 
     event ProposalAdded (uint index, uint proposalType, address target, uint newThreshold);
@@ -37,8 +36,8 @@ contract Ballot is OwnerManager {
     uint public stakedAmount;
     uint public numberProposals;
     mapping(address => uint) public stakes;
-    mapping(uint => Proposal) public proposals;
     mapping(address => uint[]) public votes;
+    mapping(uint => Proposal) public proposals;
 
     function setupPool(address _bPool) internal {
         bPool = IERC20(_bPool);
@@ -61,20 +60,23 @@ contract Ballot is OwnerManager {
     function unstake() public onlyStaker {
         bPool.transfer(msg.sender, stakes[msg.sender]);
         stakedAmount -= stakes[msg.sender];
+        uint[] memory openVotes = votes[msg.sender];
+        for (uint i = 0; i < openVotes.length; i++) {
+            proposals[openVotes[i]].votes -= stakes[msg.sender];
+        }
         stakes[msg.sender] = 0;
+        votes[msg.sender] = new uint[](0);
     }
 
     function addProposal(uint _type, address _target, uint _newThreshold) public onlyStaker {
         require(_target != address(0), "B4");
-        address[] memory initialVoters = new address[](1);
-        initialVoters[0] = msg.sender;
+
         Proposal memory proposal = Proposal(
             ProposalType(_type),
             _target,
             _newThreshold,
             stakes[msg.sender],
-            ProposalStatus.open,
-            initialVoters
+            ProposalStatus.open
         );
     
         emit ProposalAdded(numberProposals, _type, _target, _newThreshold);
@@ -91,12 +93,12 @@ contract Ballot is OwnerManager {
             address elected = proposals[_index].owner;
             if (proposals[_index].proposalType == ProposalType.addOwner) {
                 addOwnerWithThreshold(elected, newSafeThreshold);
+            } else {
+                //removeOwner
             }
-
             proposals[_index].proposalStatus = ProposalStatus.closed;
         } else {
             votes[msg.sender].push(_index);
-            proposals[_index].voters.push(msg.sender);
         }
     }
 
@@ -104,9 +106,5 @@ contract Ballot is OwnerManager {
         uint votes = proposals[_index].votes;
         uint total = bPool.totalSupply();
         return votes * 2 > total;
-    }
-
-    function getVotersForProposal(uint _index) public view returns(address[] memory) {
-        return proposals[_index].voters;
     }
 }

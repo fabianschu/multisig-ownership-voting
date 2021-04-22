@@ -29,8 +29,7 @@ describe("Ballot", async () => {
     address: string,
     threshold: BigNumber,
     votes: BigNumber,
-    status: BigNumber,
-    voters: Array<string>;
+    status: BigNumber;
 
   beforeEach(async () => {
     await deployments.fixture();
@@ -114,29 +113,38 @@ describe("Ballot", async () => {
         });
       });
 
-      // describe("caller has active votes (created proposal and voted)", async () => {
-      //   const newThreshold = 2;
+      describe("caller has active votes", async () => {
+        const newThreshold = 2;
+        beforeEach(async () => {
+          carlosInitialBalance = await bPoolinstance.balanceOf(carlos.address);
+          await bPoolinstance
+            .connect(carlos)
+            .approve(safeInstance.address, MAX);
+          await safeInstance.connect(carlos).stake();
+          await safeInstance
+            .connect(carlos)
+            .addProposal(addOwnerProposal, bob.address, newThreshold);
+        });
 
-      //   beforeEach(async () => {
-      //     await bPoolinstance
-      //       .connect(carlos)
-      //       .approve(safeInstance.address, MAX);
-      //     await safeInstance.connect(carlos).stake();
-      //     await safeInstance
-      //       .connect(carlos)
-      //       .addProposal(addOwnerProposal, bob.address, newThreshold);
+        it("removes active votes from voter side registery", async () => {
+          await safeInstance.connect(carlos).unstake();
 
-      //     await bPoolinstance.connect(dido).approve(safeInstance.address, MAX);
-      //     await safeInstance.connect(dido).stake();
-      //     await safeInstance
-      //       .connect(dido)
-      //       .addProposal(addOwnerProposal, eddie.address, newThreshold);
+          expect(safeInstance.votes(carlos.address, 0)).to.be.reverted;
+        });
 
-      //     await safeInstance.connect(carlos).vote(secondProposalIdx);
-      //   });
+        it.only("removes active votes from open proposal", async () => {
+          await safeInstance.connect(carlos).unstake();
+          [
+            type,
+            address,
+            threshold,
+            votes,
+            status,
+          ] = await safeInstance.proposals(firstProposalIdx);
 
-      //   it("removes all active votes", () => {});
-      // });
+          expect(votes).to.equal(0);
+        });
+      });
     });
   });
 
@@ -182,8 +190,7 @@ describe("Ballot", async () => {
             threshold,
             votes,
             status,
-            voters,
-          ] = await safeInstance.proposals(0);
+          ] = await safeInstance.proposals(firstProposalIdx);
 
           expect(type).to.equal(addOwnerProposal);
           expect(address).to.equal(bob.address);
@@ -229,19 +236,6 @@ describe("Ballot", async () => {
           expect(await safeInstance.votes(alice.address, 0)).to.equal(
             firstProposalIdx
           );
-        });
-
-        it("should register caller as voter for proposal (proposal side)", async () => {
-          await safeInstance.addProposal(
-            addOwnerProposal,
-            bob.address,
-            newThreshold
-          );
-          const [address] = await safeInstance.getVotersForProposal(
-            firstProposalIdx
-          );
-
-          expect(address).to.equal(alice.address);
         });
       });
     });
@@ -304,7 +298,6 @@ describe("Ballot", async () => {
             threshold,
             votes,
             status,
-            voters,
           ] = await safeInstance.proposals(firstProposalIdx);
         });
 
@@ -320,10 +313,6 @@ describe("Ballot", async () => {
         it("should set the accepted proposal status to closed", async () => {
           expect(status).to.equal(closedProposal);
         });
-
-        // it("should remove the accepted proposal from vote register of voter", async () => {
-        //   expect(status).to.equal(closedProposal);
-        // });
       });
 
       describe("when new vote DOES NOT push total votes over threshold", () => {
@@ -346,7 +335,6 @@ describe("Ballot", async () => {
             threshold,
             votes,
             status,
-            voters,
           ] = await safeInstance.proposals(firstProposalIdx);
         });
 
@@ -369,14 +357,6 @@ describe("Ballot", async () => {
           expect(await safeInstance.votes(dido.address, 0)).to.equal(
             firstProposalIdx
           );
-        });
-
-        it("should register that voter has voted for proposal (proposal side)", async () => {
-          const [
-            firstAddress,
-            secondAddress,
-          ] = await safeInstance.getVotersForProposal(firstProposalIdx);
-          expect(secondAddress).to.equal(dido.address);
         });
       });
     });
