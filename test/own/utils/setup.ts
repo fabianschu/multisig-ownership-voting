@@ -4,7 +4,7 @@ import * as token from "../../../build/artifacts/contracts/balancer/test/TToken.
 import * as bpool from "../../../build/artifacts/contracts/balancer/BPool.sol/BPool.json";
 
 export const setupBalancerPool = async () => {
-  const [alice, bob, carlos, dido] = await ethers.getSigners();
+  const [alice, bob, carlos, dido, eddie] = await ethers.getSigners();
   const MAX = ethers.constants.MaxUint256;
   // set up token contracts
   const usdtInstance = await waffle.deployContract(alice, token, [
@@ -26,6 +26,8 @@ export const setupBalancerPool = async () => {
   await daiInstance.mint(bob.address, ethers.utils.parseEther("10"));
   await usdtInstance.mint(carlos.address, ethers.utils.parseEther("10"));
   await daiInstance.mint(carlos.address, ethers.utils.parseEther("10"));
+  await usdtInstance.mint(dido.address, ethers.utils.parseEther("10"));
+  await daiInstance.mint(dido.address, ethers.utils.parseEther("10"));
 
   // approve tokens
   await usdtInstance.approve(bPoolinstance.address, MAX);
@@ -54,6 +56,8 @@ export const setupBalancerPool = async () => {
   await daiInstance.connect(bob).approve(bPoolinstance.address, MAX);
   await usdtInstance.connect(carlos).approve(bPoolinstance.address, MAX);
   await daiInstance.connect(carlos).approve(bPoolinstance.address, MAX);
+  await usdtInstance.connect(dido).approve(bPoolinstance.address, MAX);
+  await daiInstance.connect(dido).approve(bPoolinstance.address, MAX);
 
   // bob joins pool
   await bPoolinstance
@@ -63,10 +67,14 @@ export const setupBalancerPool = async () => {
   // alice joins pool
   await bPoolinstance
     .connect(carlos)
-    .joinPool(ethers.utils.parseEther("100"), [MAX, MAX]);
+    .joinPool(ethers.utils.parseEther("50"), [MAX, MAX]);
+
+  await bPoolinstance
+    .connect(dido)
+    .joinPool(ethers.utils.parseEther("50"), [MAX, MAX]);
 
   return {
     contractInstances: { usdtInstance, daiInstance, bPoolinstance },
-    users: { alice, bob, carlos, dido },
+    users: { alice, bob, carlos, dido, eddie },
   };
 };
