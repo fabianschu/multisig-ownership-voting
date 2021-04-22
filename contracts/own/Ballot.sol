@@ -21,8 +21,12 @@ contract Ballot is OwnerManager {
     function stake() public {
         uint stakerBalance = bPool.balanceOf(msg.sender);
         bool success = bPool.transferFrom(msg.sender, address(this), stakerBalance);
-        require(success, "B1");
         stakes[msg.sender] = stakerBalance;
+    }
+    
+    function unstake() public {
+        require(stakes[msg.sender] != 0, "B1");
+        bPool.transfer(msg.sender, stakes[msg.sender]);
     }
 
     // getAcceptanceThreshold
