@@ -28,6 +28,8 @@ export const setupBalancerPool = async () => {
   await daiInstance.mint(carlos.address, ethers.utils.parseEther("10"));
   await usdtInstance.mint(dido.address, ethers.utils.parseEther("10"));
   await daiInstance.mint(dido.address, ethers.utils.parseEther("10"));
+  await usdtInstance.mint(eddie.address, ethers.utils.parseEther("100"));
+  await daiInstance.mint(eddie.address, ethers.utils.parseEther("100"));
 
   // approve tokens
   await usdtInstance.approve(bPoolinstance.address, MAX);
@@ -58,6 +60,8 @@ export const setupBalancerPool = async () => {
   await daiInstance.connect(carlos).approve(bPoolinstance.address, MAX);
   await usdtInstance.connect(dido).approve(bPoolinstance.address, MAX);
   await daiInstance.connect(dido).approve(bPoolinstance.address, MAX);
+  await usdtInstance.connect(eddie).approve(bPoolinstance.address, MAX);
+  await daiInstance.connect(eddie).approve(bPoolinstance.address, MAX);
 
   // bob joins pool
   await bPoolinstance

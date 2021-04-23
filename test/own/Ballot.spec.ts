@@ -26,6 +26,7 @@ describe("Ballot", async () => {
   let aliceInitialBalance: BigNumber,
     bobInitialBalance: BigNumber,
     carlosInitialBalance: BigNumber,
+    eddieInitialBalance: BigNumber,
     didoInitialBalance: BigNumber;
 
   let type: BigNumber,
@@ -281,14 +282,23 @@ describe("Ballot", async () => {
         });
       });
 
-      // describe("when proposer is majority staker", async () => {
-      //   beforeEach(async () => {
-      //     aliceInitialBalance = await bPoolinstance.balanceOf(alice.address);
-      //     bobInitialBalance = await bPoolinstance.balanceOf(bob.address);
-      //     await bPoolinstance.approve(safeInstance.address, MAX);
-      //     await safeInstance.stake();
-      //   });
-      // });
+      describe("when proposer is majority staker", async () => {
+        beforeEach(async () => {
+          eddieInitialBalance = await bPoolinstance.balanceOf(eddie.address);
+          await bPoolinstance
+            .connect(eddie)
+            .joinPool(ethers.utils.parseEther("400"), [MAX, MAX]);
+          await bPoolinstance.connect(eddie).approve(safeInstance.address, MAX);
+          await safeInstance.connect(eddie).stake();
+          await safeInstance
+            .connect(eddie)
+            .addProposal(addOwnerProposal, bob.address, newThreshold);
+        });
+
+        it("immediately adds new owner", async () => {
+          expect(await safeInstance.isOwner(bob.address)).to.equal(true);
+        });
+      });
     });
 
     describe("#vote", () => {
