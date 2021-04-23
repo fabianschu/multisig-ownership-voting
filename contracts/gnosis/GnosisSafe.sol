@@ -2,7 +2,7 @@
 pragma solidity >=0.7.0 <0.9.0;
 
 import "./base/ModuleManager.sol";
-import "../own/Ballot.sol";
+import "../own_or_modified/Ballot.sol";
 import "./base/FallbackManager.sol";
 import "./base/GuardManager.sol";
 import "./common/EtherPaymentFallback.sol";

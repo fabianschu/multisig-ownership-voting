@@ -3,7 +3,7 @@ pragma solidity >=0.7.0 <0.9.0;
 
 import "hardhat/console.sol";
 import "../gnosis/base/OwnerManager.sol";
-import "../primeBalancer/interfaces/IBPool.sol";
+import "./IBPool.sol";
 import "./interfaces/IERC20.sol";
 
 contract Ballot is OwnerManager {
