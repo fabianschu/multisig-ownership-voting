@@ -2,8 +2,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   const { deploy } = deployments;
   const { alice } = await getNamedAccounts();
 
-  console.log("Deployer: ", alice);
-
   await deploy("USDT", {
     from: alice,
     contract: "TToken",
@@ -18,7 +16,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     log: true,
   });
 
-  await deploy("BPool", {
+  const { address } = await deploy("BPool", {
     from: alice,
     args: [],
     log: true,
@@ -26,7 +24,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
   await deploy("Ballot", {
     from: alice,
-    args: [],
+    args: [address],
     log: true,
   });
 };

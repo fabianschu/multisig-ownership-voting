@@ -15,31 +15,11 @@ contract OwnerManager {
     uint256 internal ownerCount;
     uint256 internal threshold;
 
-    /// @dev Setup function sets initial storage of contract.
-    /// @param _owners List of Safe owners.
-    /// @param _threshold Number of required confirmations for a Safe transaction.
-    function setupOwners(address[] memory _owners, uint256 _threshold) internal {
-        // Threshold can only be 0 at initialization.
-        // Check ensures that setup function can only be called once.
-        require(threshold == 0, "GS200");
-        // Validate that threshold is smaller than number of added owners.
-        require(_threshold <= _owners.length, "GS201");
-        // There has to be at least one Safe owner.
-        require(_threshold >= 1, "GS202");
-        // Initializing Safe owners.
-        address currentOwner = SENTINEL_OWNERS;
-        for (uint256 i = 0; i < _owners.length; i++) {
-            // Owner address cannot be null.
-            address owner = _owners[i];
-            require(owner != address(0) && owner != SENTINEL_OWNERS && owner != address(this) && currentOwner != owner, "GS203");
-            // No duplicate owners allowed.
-            require(owners[owner] == address(0), "GS204");
-            owners[currentOwner] = owner;
-            currentOwner = owner;
-        }
-        owners[currentOwner] = SENTINEL_OWNERS;
-        ownerCount = _owners.length;
-        threshold = _threshold;
+    constructor() {
+        threshold = 1;
+        ownerCount = 1;
+        owners[SENTINEL_OWNERS] = msg.sender;
+        owners[msg.sender] = SENTINEL_OWNERS;
     }
 
     /// @dev Allows to add a new owner to the Safe and update the threshold at the same time.
@@ -82,31 +62,6 @@ contract OwnerManager {
         emit RemovedOwner(owner);
         // Change threshold if threshold was changed.
         if (threshold != _threshold) changeThreshold(_threshold);
-    }
-
-    /// @dev Allows to swap/replace an owner from the Safe with another address.
-    ///      This can only be done via a Safe transaction.
-    /// @notice Replaces the owner `oldOwner` in the Safe with `newOwner`.
-    /// @param prevOwner Owner that pointed to the owner to be replaced in the linked list
-    /// @param oldOwner Owner address to be replaced.
-    /// @param newOwner New owner address.
-    function swapOwner(
-        address prevOwner,
-        address oldOwner,
-        address newOwner
-    ) internal {
-        // Owner address cannot be null, the sentinel or the Safe itself.
-        require(newOwner != address(0) && newOwner != SENTINEL_OWNERS && newOwner != address(this), "GS203");
-        // No duplicate owners allowed.
-        require(owners[newOwner] == address(0), "GS204");
-        // Validate oldOwner address and check that it corresponds to owner index.
-        require(oldOwner != address(0) && oldOwner != SENTINEL_OWNERS, "GS203");
-        require(owners[prevOwner] == oldOwner, "GS205");
-        owners[newOwner] = owners[oldOwner];
-        owners[prevOwner] = newOwner;
-        owners[oldOwner] = address(0);
-        emit RemovedOwner(oldOwner);
-        emit AddedOwner(newOwner);
     }
 
     /// @dev Allows to update the number of required confirmations by Safe owners.

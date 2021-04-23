@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity >=0.7.0 <0.9.0;
 
-import "hardhat/console.sol";
 import "./OwnerManager.sol";
 import "./IBPool.sol";
 import "./interfaces/IERC20.sol";
@@ -39,7 +38,7 @@ contract Ballot is OwnerManager {
     mapping(address => uint[]) public votes;
     mapping(uint => Proposal) public proposals;
 
-    function setupPool(address _bPool) internal {
+    constructor(address _bPool) {
         bPool = IERC20(_bPool);
     }
 

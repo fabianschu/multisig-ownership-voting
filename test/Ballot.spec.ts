@@ -1,6 +1,5 @@
 import { expect } from "chai";
-import { deployments, waffle, ethers } from "hardhat";
-import { getSafeWithOwners } from "../gnosis/utils/setup";
+import { deployments, ethers } from "hardhat";
 import { setupBalancerPool } from "./utils/setup";
 import { BigNumber, Contract } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
@@ -14,11 +13,24 @@ const removeOwnerProposal = 1;
 const openProposal = 1;
 const closedProposal = 0;
 
+const setupTest = deployments.createFixture(
+  async ({ deployments, ethers }, options) => {
+    await deployments.fixture();
+    const [alice, bob, carlos, dido, eddie] = await ethers.getSigners();
+
+    const { bPoolInstance } = await setupBalancerPool();
+
+    const safeInstance = await ethers.getContract("Ballot", alice);
+
+    return {
+      users: { alice, bob, carlos, dido, eddie },
+      contractInstances: { bPoolInstance, safeInstance },
+    };
+  }
+);
+
 describe("Ballot", async () => {
-  let bPoolinstance: Contract,
-    safeInstance: Contract,
-    usdtInstance: Contract,
-    daiInstance: Contract;
+  let bPoolInstance: Contract, safeInstance: Contract;
   let alice: SignerWithAddress,
     bob: SignerWithAddress,
     carlos: SignerWithAddress,
@@ -29,7 +41,6 @@ describe("Ballot", async () => {
     carlosInitialBalance: BigNumber,
     eddieInitialBalance: BigNumber,
     didoInitialBalance: BigNumber;
-
   let type: BigNumber,
     address: string,
     threshold: BigNumber,
@@ -37,15 +48,10 @@ describe("Ballot", async () => {
     status: BigNumber;
 
   beforeEach(async () => {
-    await deployments.fixture();
     ({
-      contractInstances: { bPoolinstance },
       users: { alice, bob, carlos, dido, eddie },
-    } = await setupBalancerPool());
-    safeInstance = await getSafeWithOwners(
-      [alice.address],
-      bPoolinstance.address
-    );
+      contractInstances: { bPoolInstance, safeInstance },
+    } = await setupTest());
   });
 
   describe("staking", () => {
@@ -59,13 +65,13 @@ describe("Ballot", async () => {
 
       describe("with approval", () => {
         beforeEach(async () => {
-          aliceInitialBalance = await bPoolinstance.balanceOf(alice.address);
-          await bPoolinstance.approve(safeInstance.address, MAX);
+          aliceInitialBalance = await bPoolInstance.balanceOf(alice.address);
+          await bPoolInstance.approve(safeInstance.address, MAX);
         });
 
         it("should transfer Alice's token to Ballot", async () => {
           await safeInstance.stake();
-          expect(await bPoolinstance.balanceOf(safeInstance.address)).to.equal(
+          expect(await bPoolInstance.balanceOf(safeInstance.address)).to.equal(
             aliceInitialBalance
           );
         });
@@ -88,8 +94,8 @@ describe("Ballot", async () => {
 
     describe("#unstake", () => {
       beforeEach(async () => {
-        aliceInitialBalance = await bPoolinstance.balanceOf(alice.address);
-        await bPoolinstance.approve(safeInstance.address, MAX);
+        aliceInitialBalance = await bPoolInstance.balanceOf(alice.address);
+        await bPoolInstance.approve(safeInstance.address, MAX);
       });
 
       it("should revert if caller is not staker", async () => {
@@ -104,7 +110,7 @@ describe("Ballot", async () => {
         });
 
         it("should transfer tokens back to Alice if called by Alice", async () => {
-          expect(await bPoolinstance.balanceOf(alice.address)).to.equal(
+          expect(await bPoolInstance.balanceOf(alice.address)).to.equal(
             aliceInitialBalance
           );
         });
@@ -120,8 +126,8 @@ describe("Ballot", async () => {
 
       describe("caller has active votes", async () => {
         beforeEach(async () => {
-          carlosInitialBalance = await bPoolinstance.balanceOf(carlos.address);
-          await bPoolinstance
+          carlosInitialBalance = await bPoolInstance.balanceOf(carlos.address);
+          await bPoolInstance
             .connect(carlos)
             .approve(safeInstance.address, MAX);
           await safeInstance.connect(carlos).stake();
@@ -146,8 +152,8 @@ describe("Ballot", async () => {
         });
 
         it("should remove active votes from TWO open proposals", async () => {
-          didoInitialBalance = await bPoolinstance.balanceOf(dido.address);
-          await bPoolinstance.connect(dido).approve(safeInstance.address, MAX);
+          didoInitialBalance = await bPoolInstance.balanceOf(dido.address);
+          await bPoolInstance.connect(dido).approve(safeInstance.address, MAX);
           await safeInstance.connect(dido).stake();
           await safeInstance
             .connect(dido)
@@ -171,10 +177,10 @@ describe("Ballot", async () => {
         });
 
         it("should NOT remove active votes from closed proposal", async () => {
-          aliceInitialBalance = await bPoolinstance.balanceOf(alice.address);
-          bobInitialBalance = await bPoolinstance.balanceOf(bob.address);
+          aliceInitialBalance = await bPoolInstance.balanceOf(alice.address);
+          bobInitialBalance = await bPoolInstance.balanceOf(bob.address);
           await safeInstance.stake();
-          await bPoolinstance.connect(bob).approve(safeInstance.address, MAX);
+          await bPoolInstance.connect(bob).approve(safeInstance.address, MAX);
           await safeInstance.connect(bob).stake();
           await safeInstance.vote(firstProposalIdx);
           await safeInstance.connect(bob).vote(firstProposalIdx);
@@ -203,8 +209,8 @@ describe("Ballot", async () => {
 
       describe("when proposer is staker", () => {
         beforeEach(async () => {
-          aliceInitialBalance = await bPoolinstance.balanceOf(alice.address);
-          await bPoolinstance.approve(safeInstance.address, MAX);
+          aliceInitialBalance = await bPoolInstance.balanceOf(alice.address);
+          await bPoolInstance.approve(safeInstance.address, MAX);
           await safeInstance.stake();
         });
 
@@ -257,11 +263,11 @@ describe("Ballot", async () => {
 
       describe("when proposer is majority staker", async () => {
         beforeEach(async () => {
-          eddieInitialBalance = await bPoolinstance.balanceOf(eddie.address);
-          await bPoolinstance
+          eddieInitialBalance = await bPoolInstance.balanceOf(eddie.address);
+          await bPoolInstance
             .connect(eddie)
             .joinPool(ethers.utils.parseEther("400"), [MAX, MAX]);
-          await bPoolinstance.connect(eddie).approve(safeInstance.address, MAX);
+          await bPoolInstance.connect(eddie).approve(safeInstance.address, MAX);
           await safeInstance.connect(eddie).stake();
           await safeInstance
             .connect(eddie)
@@ -276,9 +282,9 @@ describe("Ballot", async () => {
 
     describe("#vote", () => {
       beforeEach(async () => {
-        aliceInitialBalance = await bPoolinstance.balanceOf(alice.address);
-        bobInitialBalance = await bPoolinstance.balanceOf(bob.address);
-        await bPoolinstance.approve(safeInstance.address, MAX);
+        aliceInitialBalance = await bPoolInstance.balanceOf(alice.address);
+        bobInitialBalance = await bPoolInstance.balanceOf(bob.address);
+        await bPoolInstance.approve(safeInstance.address, MAX);
         await safeInstance.stake();
       });
 
@@ -306,7 +312,7 @@ describe("Ballot", async () => {
         describe("when new vote pushes total votes over threshold", () => {
           beforeEach(async () => {
             await safeInstance.addProposal(addOwnerProposal, bob.address);
-            await bPoolinstance.connect(bob).approve(safeInstance.address, MAX);
+            await bPoolInstance.connect(bob).approve(safeInstance.address, MAX);
             await safeInstance.connect(bob).stake();
             await safeInstance.connect(bob).vote(firstProposalIdx);
             [type, address, votes, status] = await safeInstance.proposals(
@@ -330,7 +336,7 @@ describe("Ballot", async () => {
           });
 
           it("should revert additional voting attempts", async () => {
-            await bPoolinstance
+            await bPoolInstance
               .connect(carlos)
               .approve(safeInstance.address, MAX);
 
@@ -344,18 +350,18 @@ describe("Ballot", async () => {
 
         describe("when new vote DOES NOT push total votes over threshold", () => {
           beforeEach(async () => {
-            carlosInitialBalance = await bPoolinstance.balanceOf(
+            carlosInitialBalance = await bPoolInstance.balanceOf(
               carlos.address
             );
-            didoInitialBalance = await bPoolinstance.balanceOf(dido.address);
-            await bPoolinstance
+            didoInitialBalance = await bPoolInstance.balanceOf(dido.address);
+            await bPoolInstance
               .connect(carlos)
               .approve(safeInstance.address, MAX);
             await safeInstance.connect(carlos).stake();
             await safeInstance
               .connect(carlos)
               .addProposal(addOwnerProposal, bob.address);
-            await bPoolinstance
+            await bPoolInstance
               .connect(dido)
               .approve(safeInstance.address, MAX);
             await safeInstance.connect(dido).stake();
@@ -391,7 +397,7 @@ describe("Ballot", async () => {
       describe("removeOwner proposal", () => {
         beforeEach(async () => {
           await safeInstance.addProposal(addOwnerProposal, bob.address);
-          await bPoolinstance.connect(bob).approve(safeInstance.address, MAX);
+          await bPoolInstance.connect(bob).approve(safeInstance.address, MAX);
           await safeInstance.connect(bob).stake();
           await safeInstance.connect(bob).vote(firstProposalIdx);
         });
@@ -422,13 +428,13 @@ describe("Ballot", async () => {
 
     describe("#executeProposal", () => {
       beforeEach(async () => {
-        eddieInitialBalance = await bPoolinstance.balanceOf(eddie.address);
-        await bPoolinstance.approve(safeInstance.address, MAX);
+        eddieInitialBalance = await bPoolInstance.balanceOf(eddie.address);
+        await bPoolInstance.approve(safeInstance.address, MAX);
         await safeInstance.stake();
-        await bPoolinstance
+        await bPoolInstance
           .connect(eddie)
           .joinPool(ethers.utils.parseEther("300"), [MAX, MAX]);
-        await bPoolinstance.connect(bob).approve(safeInstance.address, MAX);
+        await bPoolInstance.connect(bob).approve(safeInstance.address, MAX);
         await safeInstance.connect(bob).stake();
         await safeInstance.addProposal(addOwnerProposal, bob.address);
         await safeInstance.connect(bob).vote(firstProposalIdx);
@@ -440,7 +446,7 @@ describe("Ballot", async () => {
       });
 
       it("should add the owner if there is a majority", async () => {
-        await bPoolinstance
+        await bPoolInstance
           .connect(eddie)
           .exitPool(ethers.utils.parseEther("300"), [MIN, MIN]);
         const executeProposal = safeInstance.executeProposal(firstProposalIdx);
