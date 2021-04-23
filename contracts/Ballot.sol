@@ -2,7 +2,7 @@
 pragma solidity >=0.7.0 <0.9.0;
 
 import "hardhat/console.sol";
-import "../gnosis/base/OwnerManager.sol";
+import "./OwnerManager.sol";
 import "./IBPool.sol";
 import "./interfaces/IERC20.sol";
 
