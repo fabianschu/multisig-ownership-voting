@@ -14,12 +14,11 @@ contract Ballot is OwnerManager {
     struct Proposal {
         ProposalType proposalType;
         address owner;
-        uint newThreshold;
         uint votes;
         ProposalStatus proposalStatus;
     }
 
-    event ProposalAdded (uint index, uint proposalType, address target, uint newThreshold);
+    event ProposalAdded (uint index, uint proposalType, address target);
 
     modifier onlyStaker() {
         require(stakes[msg.sender] != 0, "B2");
@@ -71,18 +70,16 @@ contract Ballot is OwnerManager {
         votes[msg.sender] = new uint[](0);
     }
 
-    function addProposal(uint _type, address _target, uint _newThreshold) public onlyStaker {
+    function addProposal(uint _type, address _target) public onlyStaker {
         require(_target != address(0), "B4");
-
         Proposal memory proposal = Proposal(
             ProposalType(_type),
             _target,
-            _newThreshold,
             0,
             ProposalStatus.open
         );
     
-        emit ProposalAdded(numberProposals, _type, _target, _newThreshold);
+        emit ProposalAdded(numberProposals, _type, _target);
         proposals[numberProposals] = proposal;
         vote(numberProposals);
         numberProposals++;
@@ -116,7 +113,7 @@ contract Ballot is OwnerManager {
     function executeProposal(uint _index) public {
         require(isMajorityVote(_index), "B6");
 
-        uint newSafeThreshold = proposals[_index].newThreshold;
+        uint newSafeThreshold = newMultiSigThreshold(proposals[_index].proposalType);
         address elected = proposals[_index].owner;
         if (proposals[_index].proposalType == ProposalType.addOwner) {
             addOwnerWithThreshold(elected, newSafeThreshold);
@@ -135,5 +132,26 @@ contract Ballot is OwnerManager {
             removeOwner(prevOwner, owner, newSafeThreshold);
         }
         proposals[_index].proposalStatus = ProposalStatus.closed;
+    }
+
+    function newMultiSigThreshold(ProposalType _proposalType) internal view returns(uint) {
+        uint nextOwnerCount;
+        uint nextThreshold = threshold;
+
+        if (_proposalType == ProposalType.addOwner) {
+            nextOwnerCount = ownerCount + 1;
+            if (threshold * 2 <= nextOwnerCount) {
+                nextThreshold++;
+            }
+        } else if (_proposalType == ProposalType.removeOwner) {
+            nextOwnerCount = ownerCount - 1;
+            if ((threshold - 1) * 2 > nextOwnerCount) {
+                nextThreshold--;
+            }
+        } 
+
+        require(nextOwnerCount > 0, "B7");
+
+        return nextThreshold; 
     }
 }

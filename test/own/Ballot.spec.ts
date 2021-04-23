@@ -119,7 +119,6 @@ describe("Ballot", async () => {
       });
 
       describe("caller has active votes", async () => {
-        const newThreshold = 2;
         beforeEach(async () => {
           carlosInitialBalance = await bPoolinstance.balanceOf(carlos.address);
           await bPoolinstance
@@ -128,7 +127,7 @@ describe("Ballot", async () => {
           await safeInstance.connect(carlos).stake();
           await safeInstance
             .connect(carlos)
-            .addProposal(addOwnerProposal, bob.address, newThreshold);
+            .addProposal(addOwnerProposal, bob.address);
         });
 
         it("should remove active votes from voter side registery", async () => {
@@ -139,13 +138,9 @@ describe("Ballot", async () => {
 
         it("should remove active votes from ONE open proposal", async () => {
           await safeInstance.connect(carlos).unstake();
-          [
-            type,
-            address,
-            threshold,
-            votes,
-            status,
-          ] = await safeInstance.proposals(firstProposalIdx);
+          [type, address, votes, status] = await safeInstance.proposals(
+            firstProposalIdx
+          );
 
           expect(votes).to.equal(0);
         });
@@ -156,15 +151,23 @@ describe("Ballot", async () => {
           await safeInstance.connect(dido).stake();
           await safeInstance
             .connect(dido)
-            .addProposal(addOwnerProposal, bob.address, newThreshold);
+            .addProposal(addOwnerProposal, bob.address);
           await safeInstance.connect(carlos).vote(secondProposalIdx);
           await safeInstance.connect(carlos).unstake();
-          const firstProposal = await safeInstance.proposals(firstProposalIdx);
-          const secondProposal = await safeInstance.proposals(
-            secondProposalIdx
-          );
-          expect(firstProposal[3]).to.equal(0);
-          expect(secondProposal[3]).to.equal(didoInitialBalance);
+          const [
+            firstType,
+            firstAddress,
+            firstVotes,
+            firstStatus,
+          ] = await safeInstance.proposals(firstProposalIdx);
+          const [
+            secondType,
+            secondAddress,
+            secondVotes,
+            secondStatus,
+          ] = await safeInstance.proposals(secondProposalIdx);
+          expect(firstVotes).to.equal(0);
+          expect(secondVotes).to.equal(didoInitialBalance);
         });
 
         it("should NOT remove active votes from closed proposal", async () => {
@@ -176,13 +179,9 @@ describe("Ballot", async () => {
           await safeInstance.vote(firstProposalIdx);
           await safeInstance.connect(bob).vote(firstProposalIdx);
           await safeInstance.connect(carlos).unstake();
-          [
-            type,
-            address,
-            threshold,
-            votes,
-            status,
-          ] = await safeInstance.proposals(firstProposalIdx);
+          [type, address, votes, status] = await safeInstance.proposals(
+            firstProposalIdx
+          );
 
           expect(votes).to.equal(
             aliceInitialBalance.add(bobInitialBalance).add(carlosInitialBalance)
@@ -193,14 +192,11 @@ describe("Ballot", async () => {
   });
 
   describe("proposing/voting process", () => {
-    const newThreshold = 2;
-
     describe("#addProposal", () => {
       it("should revert when proposer is NOT staker", async () => {
         const addProposal = safeInstance.addProposal(
           addOwnerProposal,
-          bob.address,
-          newThreshold
+          bob.address
         );
         await expect(addProposal).to.be.revertedWith("B2");
       });
@@ -215,40 +211,26 @@ describe("Ballot", async () => {
         it("should revert if address is 0x00", async () => {
           const addProposal = safeInstance.addProposal(
             addOwnerProposal,
-            ethers.constants.AddressZero,
-            newThreshold
+            ethers.constants.AddressZero
           );
 
           await expect(addProposal).to.be.revertedWith("B4");
         });
 
         it("should add a proposal", async () => {
-          await safeInstance.addProposal(
-            addOwnerProposal,
-            bob.address,
-            newThreshold
+          await safeInstance.addProposal(addOwnerProposal, bob.address);
+          const [type, address, votes, status] = await safeInstance.proposals(
+            firstProposalIdx
           );
-          const [
-            type,
-            address,
-            threshold,
-            votes,
-            status,
-          ] = await safeInstance.proposals(firstProposalIdx);
 
           expect(type).to.equal(addOwnerProposal);
           expect(address).to.equal(bob.address);
-          expect(threshold).to.equal(newThreshold);
           expect(votes).to.equal(aliceInitialBalance);
           expect(status).to.equal(openProposal);
         });
 
         it("should increment the number of proposals", async () => {
-          await safeInstance.addProposal(
-            addOwnerProposal,
-            bob.address,
-            newThreshold
-          );
+          await safeInstance.addProposal(addOwnerProposal, bob.address);
 
           expect(await safeInstance.numberProposals()).to.equal(1);
         });
@@ -257,26 +239,16 @@ describe("Ballot", async () => {
           const expectedIndex = 0;
           const addProposal = safeInstance.addProposal(
             addOwnerProposal,
-            bob.address,
-            newThreshold
+            bob.address
           );
 
           await expect(addProposal)
             .to.emit(safeInstance, "ProposalAdded")
-            .withArgs(
-              expectedIndex,
-              addOwnerProposal,
-              bob.address,
-              newThreshold
-            );
+            .withArgs(expectedIndex, addOwnerProposal, bob.address);
         });
 
         it("should register proposal as voted by the caller (voter side)", async () => {
-          await safeInstance.addProposal(
-            addOwnerProposal,
-            bob.address,
-            newThreshold
-          );
+          await safeInstance.addProposal(addOwnerProposal, bob.address);
           expect(await safeInstance.votes(alice.address, 0)).to.equal(
             firstProposalIdx
           );
@@ -293,7 +265,7 @@ describe("Ballot", async () => {
           await safeInstance.connect(eddie).stake();
           await safeInstance
             .connect(eddie)
-            .addProposal(addOwnerProposal, bob.address, newThreshold);
+            .addProposal(addOwnerProposal, bob.address);
         });
 
         it("should immediately add new owner", async () => {
@@ -312,11 +284,7 @@ describe("Ballot", async () => {
 
       describe("addOwner proposal", () => {
         it("should revert when caller is NOT staker", async () => {
-          await safeInstance.addProposal(
-            addOwnerProposal,
-            bob.address,
-            newThreshold
-          );
+          await safeInstance.addProposal(addOwnerProposal, bob.address);
           const index = 0;
           const vote = safeInstance.connect(carlos).vote(index);
           await expect(vote).to.be.revertedWith("B2");
@@ -329,11 +297,7 @@ describe("Ballot", async () => {
         });
 
         it("should revert when voter also created proposal (double vote)", async () => {
-          await safeInstance.addProposal(
-            addOwnerProposal,
-            bob.address,
-            newThreshold
-          );
+          await safeInstance.addProposal(addOwnerProposal, bob.address);
           const doubleVote = safeInstance.vote(firstProposalIdx);
 
           await expect(doubleVote).to.be.revertedWith("B5");
@@ -341,21 +305,13 @@ describe("Ballot", async () => {
 
         describe("when new vote pushes total votes over threshold", () => {
           beforeEach(async () => {
-            await safeInstance.addProposal(
-              addOwnerProposal,
-              bob.address,
-              newThreshold
-            );
+            await safeInstance.addProposal(addOwnerProposal, bob.address);
             await bPoolinstance.connect(bob).approve(safeInstance.address, MAX);
             await safeInstance.connect(bob).stake();
             await safeInstance.connect(bob).vote(firstProposalIdx);
-            [
-              type,
-              address,
-              threshold,
-              votes,
-              status,
-            ] = await safeInstance.proposals(firstProposalIdx);
+            [type, address, votes, status] = await safeInstance.proposals(
+              firstProposalIdx
+            );
           });
 
           it("should increase the votes for the proposal", async () => {
@@ -398,19 +354,15 @@ describe("Ballot", async () => {
             await safeInstance.connect(carlos).stake();
             await safeInstance
               .connect(carlos)
-              .addProposal(addOwnerProposal, bob.address, newThreshold);
+              .addProposal(addOwnerProposal, bob.address);
             await bPoolinstance
               .connect(dido)
               .approve(safeInstance.address, MAX);
             await safeInstance.connect(dido).stake();
             await safeInstance.connect(dido).vote(firstProposalIdx);
-            [
-              type,
-              address,
-              threshold,
-              votes,
-              status,
-            ] = await safeInstance.proposals(firstProposalIdx);
+            [type, address, votes, status] = await safeInstance.proposals(
+              firstProposalIdx
+            );
           });
 
           it("should increase the votes for the proposal", async () => {
@@ -437,51 +389,30 @@ describe("Ballot", async () => {
       });
 
       describe("removeOwner proposal", () => {
-        let nextNewThreshold = newThreshold - 1;
         beforeEach(async () => {
-          await safeInstance.addProposal(
-            addOwnerProposal,
-            bob.address,
-            newThreshold
-          );
+          await safeInstance.addProposal(addOwnerProposal, bob.address);
           await bPoolinstance.connect(bob).approve(safeInstance.address, MAX);
           await safeInstance.connect(bob).stake();
           await safeInstance.connect(bob).vote(firstProposalIdx);
         });
 
         it("should remove OG owner (alice) from safe", async () => {
-          await safeInstance.addProposal(
-            removeOwnerProposal,
-            alice.address,
-            nextNewThreshold
-          );
+          await safeInstance.addProposal(removeOwnerProposal, alice.address);
           await safeInstance.connect(bob).vote(secondProposalIdx);
-          [
-            type,
-            address,
-            threshold,
-            votes,
-            status,
-          ] = await safeInstance.proposals(firstProposalIdx);
+          [type, address, votes, status] = await safeInstance.proposals(
+            firstProposalIdx
+          );
           const owners = await safeInstance.getOwners();
           expect(owners.length).to.equal(1);
           expect(owners[0]).to.equal(bob.address);
         });
 
         it("should remove new owner (bob) from safe", async () => {
-          await safeInstance.addProposal(
-            removeOwnerProposal,
-            bob.address,
-            nextNewThreshold
-          );
+          await safeInstance.addProposal(removeOwnerProposal, bob.address);
           await safeInstance.connect(bob).vote(secondProposalIdx);
-          [
-            type,
-            address,
-            threshold,
-            votes,
-            status,
-          ] = await safeInstance.proposals(firstProposalIdx);
+          [type, address, votes, status] = await safeInstance.proposals(
+            firstProposalIdx
+          );
           const owners = await safeInstance.getOwners();
           expect(owners.length).to.equal(1);
           expect(owners[0]).to.equal(alice.address);
@@ -499,11 +430,7 @@ describe("Ballot", async () => {
           .joinPool(ethers.utils.parseEther("300"), [MAX, MAX]);
         await bPoolinstance.connect(bob).approve(safeInstance.address, MAX);
         await safeInstance.connect(bob).stake();
-        await safeInstance.addProposal(
-          addOwnerProposal,
-          bob.address,
-          newThreshold
-        );
+        await safeInstance.addProposal(addOwnerProposal, bob.address);
         await safeInstance.connect(bob).vote(firstProposalIdx);
       });
 
