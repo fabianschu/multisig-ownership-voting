@@ -9,6 +9,7 @@ import {
 } from "../utils/setup";
 import { buildContractCall } from "../../../src/utils/execution";
 import { parseEther } from "ethers/lib/utils";
+import { setupBalancerPool } from "../../own/utils/setup";
 
 describe("SimulateTxAccessor", async () => {
   const [user1, user2] = waffle.provider.getWallets();
@@ -26,7 +27,14 @@ describe("SimulateTxAccessor", async () => {
         }`;
     const interactor = await deployContract(user1, source);
     const handler = await getCompatFallbackHandler();
-    const safe = await getSafeWithOwners([user1.address], 1, handler.address);
+    const {
+      contractInstances: { bPoolinstance },
+      users: { alice, bob, carlos, dido, eddie },
+    } = await setupBalancerPool();
+    const safe = await getSafeWithOwners(
+      [user1.address],
+      bPoolinstance.address
+    );
     const simulator = handler.attach(safe.address);
     return {
       safe,
