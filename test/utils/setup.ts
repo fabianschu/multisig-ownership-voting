@@ -1,7 +1,4 @@
-import { expect } from "chai";
-import { deployments, waffle, ethers } from "hardhat";
-import * as token from "../../build/artifacts/contracts/balancer/test/TToken.sol/TToken.json";
-import * as bpool from "../../build/artifacts/contracts/balancer/BPool.sol/BPool.json";
+import { ethers } from "hardhat";
 
 export const setupBalancerPool = async () => {
   const [alice, bob, carlos, dido, eddie] = await ethers.getSigners();
