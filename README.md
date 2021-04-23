@@ -3,7 +3,9 @@
 ## Run it
 
 Install dependencies: `yarn`
+
 Run tests: `yarn test`
+
 Coverage: `yarn coverage`
 
 ## Goal
