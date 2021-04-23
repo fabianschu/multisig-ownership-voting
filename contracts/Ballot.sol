@@ -31,8 +31,7 @@ contract Ballot is OwnerManager {
     }
 
     IERC20 internal bPool;
-    uint256 constant public MAX_INT = type(uint256).max;    
-    uint public stakedAmount;
+    uint constant public MAX_INT = type(uint).max;    
     uint public numberProposals;
     mapping(address => uint) public stakes;
     mapping(address => uint[]) public votes;
@@ -42,10 +41,10 @@ contract Ballot is OwnerManager {
         bPool = IERC20(_bPool);
     }
 
-    function getTotalVotes() public view returns(uint){
-        return bPool.totalSupply();
-    }
-
+    /// @dev Allows to stake all liquidity provider (LP) tokens from the balancer pool.
+    ///      Without staking voting/proposing is not possible.
+    ///      This contract must have been approved with the balancer pool first.
+    /// @notice Updates the caller's stakes.
     function stake() public {
         uint allowance = bPool.allowance(msg.sender, address(this));
         require(allowance == MAX_INT, "B1");
@@ -53,12 +52,13 @@ contract Ballot is OwnerManager {
         uint stakerBalance = bPool.balanceOf(msg.sender);
         bPool.transferFrom(msg.sender, address(this), stakerBalance);
         stakes[msg.sender] = stakerBalance;
-        stakedAmount += stakerBalance;
     }
     
+    /// @dev Allows to unstake LP tokens.
+    ///      Triggers removal of outstanding votes to avoid double voting.
+    /// @notice Updates the caller's stakes. Removes caller's votes from open proposals.
     function unstake() public onlyStaker {
         bPool.transfer(msg.sender, stakes[msg.sender]);
-        stakedAmount -= stakes[msg.sender];
         uint[] memory openVotes = votes[msg.sender];
         for (uint i = 0; i < openVotes.length; i++) {
             if (proposals[openVotes[i]].proposalStatus == ProposalStatus.open) {
@@ -69,6 +69,9 @@ contract Ballot is OwnerManager {
         votes[msg.sender] = new uint[](0);
     }
 
+    /// @dev Allows to add a new proposal about adding or removing owner.
+    ///      The proposer automatically votes on her proposal.
+    /// @notice Updates proposals. Updates the total number of proposals.
     function addProposal(uint _type, address _target) public onlyStaker {
         require(_target != address(0), "B4");
         Proposal memory proposal = Proposal(
@@ -84,6 +87,9 @@ contract Ballot is OwnerManager {
         numberProposals++;
     }
 
+    /// @dev Allows to vote on a proposal.
+    ///      If majority is reached (votes > half of total supply of LP tokens) proposal is executed.
+    /// @notice Updates votes on a proposal. Marks that voter has voted for a proposal (= update to votes)
     function vote(uint _index) public onlyStaker activeProposal(_index) {
         require(!hasAlreadyVoted(_index), "B5");
 
@@ -95,6 +101,9 @@ contract Ballot is OwnerManager {
         }
     }
 
+    /// @dev Checks if voter has already voted on proposal.
+    ///      If majority is reached (votes > half of total supply of LP tokens) proposal is executed.
+    /// @return Returns true if attempted double vote.
     function hasAlreadyVoted(uint _index) internal view returns(bool) {
         for (uint i = 0; i < votes[msg.sender].length; i++) {
             if (votes[msg.sender][i] == _index) {
@@ -104,11 +113,18 @@ contract Ballot is OwnerManager {
         return false;
     }
 
+    /// @dev Checks if a majority of LP token holders has voted for proposal.
+    /// @return Returns true if majority is reached.
     function isMajorityVote(uint _index) public view returns(bool){
         uint total = bPool.totalSupply();
         return proposals[_index].votes * 2 > total;
     }
 
+    /// @dev Adds or removes an owner as specified by the accepted proposal.
+    ///      Is public to enable external triggering of execution.
+    ///      This is important when majority ratios of Liquidity Pool have changed.
+    ///      E.g. a major LP leaves the pool, so that a majority for a proposal is suddenly reached.
+    /// @notice Sets the proposal status to closed.
     function executeProposal(uint _index) public {
         require(isMajorityVote(_index), "B6");
 
@@ -133,6 +149,9 @@ contract Ballot is OwnerManager {
         proposals[_index].proposalStatus = ProposalStatus.closed;
     }
 
+    /// @dev Calculates the threshold for the multisig contract
+    ///      Makes sure that the threshold is always just above 50%.
+    /// @return The smallest possible majority threshold.
     function newMultiSigThreshold(ProposalType _proposalType) internal view returns(uint) {
         uint nextOwnerCount;
         uint nextThreshold = threshold;

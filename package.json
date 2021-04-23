@@ -1,8 +1,6 @@
 {
-  "name": "@gnosis.pm/safe-contracts",
+  "name": "gnosis-ballot",
   "version": "1.3.0",
-  "description": "Ethereum multisig contract",
-  "homepage": "https://github.com/gnosis/safe-contracts/",
   "license": "GPL-3.0",
   "main": "index.js",
   "files": [
@@ -24,19 +22,6 @@
     "fmt:sol": "prettier 'contracts/**/*.sol' -w",
     "prepack": "yarn build",
     "prepare": "husky install"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/gnosis/gnosis-safe.git"
-  },
-  "keywords": [
-    "Ethereum",
-    "Wallet",
-    "Safe"
-  ],
-  "author": "stefan@gnosis.pm",
-  "bugs": {
-    "url": "https://github.com/gnosis/gnosis-safe/issues"
   },
   "devDependencies": {
     "@gnosis.pm/mock-contract": "^4.0.0",

@@ -82,13 +82,6 @@ describe("Ballot", async () => {
             aliceInitialBalance
           );
         });
-
-        it("should increase the staked amount", async () => {
-          await safeInstance.stake();
-          expect(await safeInstance.stakedAmount()).to.equal(
-            aliceInitialBalance
-          );
-        });
       });
     });
 
@@ -117,10 +110,6 @@ describe("Ballot", async () => {
 
         it("should update the registery of stakes", async () => {
           expect(await safeInstance.stakes(alice.address)).to.equal(0);
-        });
-
-        it("should decrease the staked amount", async () => {
-          expect(await safeInstance.stakedAmount()).to.equal(0);
         });
       });
 
