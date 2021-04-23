@@ -4,6 +4,20 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
   console.log("Deployer: ", alice);
 
+  await deploy("USDT", {
+    from: alice,
+    contract: "TToken",
+    args: ["USDT Stablecoin", "USDT", 18],
+    log: true,
+  });
+
+  await deploy("DAI", {
+    from: alice,
+    contract: "TToken",
+    args: ["Dai Stablecoin", "DAI", 18],
+    log: true,
+  });
+
   await deploy("BPool", {
     from: alice,
     args: [],

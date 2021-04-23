@@ -27,6 +27,10 @@ const userConfig: HardhatUserConfig = {
   },
   namedAccounts: {
     alice: 0,
+    bob: 1,
+    carlos: 2,
+    dido: 3,
+    eddie: 4,
   },
 };
 
