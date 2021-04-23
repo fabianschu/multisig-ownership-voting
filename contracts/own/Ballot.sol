@@ -99,6 +99,18 @@ contract Ballot is OwnerManager {
                 addOwnerWithThreshold(elected, newSafeThreshold);
             } else {
                 //removeOwner
+                address[] memory currentOwners = getOwners();
+                address prevOwner = SENTINEL_OWNERS;
+                address owner;
+                for (uint i; i < currentOwners.length; i++) {
+                    if (currentOwners[i] == proposals[_index].owner) {
+                        owner = currentOwners[i];
+                        if(i != 0) {
+                            prevOwner = currentOwners[i - 1];
+                        }
+                    }
+                }
+                removeOwner(prevOwner, owner, newSafeThreshold);
             }
             proposals[_index].proposalStatus = ProposalStatus.closed;
         } else {

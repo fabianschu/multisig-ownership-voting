@@ -295,7 +295,7 @@ describe("Ballot", async () => {
             .addProposal(addOwnerProposal, bob.address, newThreshold);
         });
 
-        it("immediately adds new owner", async () => {
+        it("should immediately add new owner", async () => {
           expect(await safeInstance.isOwner(bob.address)).to.equal(true);
         });
       });
@@ -435,25 +435,57 @@ describe("Ballot", async () => {
         });
       });
 
-      // describe("removeOwner proposal", () => {
-      //   beforeEach(async () => {
-      //     await safeInstance.addProposal(
-      //       addOwnerProposal,
-      //       bob.address,
-      //       newThreshold
-      //     );
-      //     await bPoolinstance.connect(bob).approve(safeInstance.address, MAX);
-      //     await safeInstance.connect(bob).stake();
-      //     await safeInstance.connect(bob).vote(firstProposalIdx);
-      //     [
-      //       type,
-      //       address,
-      //       threshold,
-      //       votes,
-      //       status,
-      //     ] = await safeInstance.proposals(firstProposalIdx);
-      //   });
-      // });
+      describe("removeOwner proposal", () => {
+        let nextNewThreshold = newThreshold - 1;
+        beforeEach(async () => {
+          await safeInstance.addProposal(
+            addOwnerProposal,
+            bob.address,
+            newThreshold
+          );
+          await bPoolinstance.connect(bob).approve(safeInstance.address, MAX);
+          await safeInstance.connect(bob).stake();
+          await safeInstance.connect(bob).vote(firstProposalIdx);
+        });
+
+        it("should remove OG owner (alice) from safe", async () => {
+          await safeInstance.addProposal(
+            removeOwnerProposal,
+            alice.address,
+            nextNewThreshold
+          );
+          await safeInstance.connect(bob).vote(secondProposalIdx);
+          [
+            type,
+            address,
+            threshold,
+            votes,
+            status,
+          ] = await safeInstance.proposals(firstProposalIdx);
+          const owners = await safeInstance.getOwners();
+          expect(owners.length).to.equal(1);
+          expect(owners[0]).to.equal(bob.address);
+        });
+
+        it.only("should remove new owner (bob) from safe", async () => {
+          await safeInstance.addProposal(
+            removeOwnerProposal,
+            bob.address,
+            nextNewThreshold
+          );
+          await safeInstance.connect(bob).vote(secondProposalIdx);
+          [
+            type,
+            address,
+            threshold,
+            votes,
+            status,
+          ] = await safeInstance.proposals(firstProposalIdx);
+          const owners = await safeInstance.getOwners();
+          expect(owners.length).to.equal(1);
+          expect(owners[0]).to.equal(alice.address);
+        });
+      });
     });
   });
 });
