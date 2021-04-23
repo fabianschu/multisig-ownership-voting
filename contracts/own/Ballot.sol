@@ -93,26 +93,7 @@ contract Ballot is OwnerManager {
 
         proposals[_index].votes += stakes[msg.sender];
         if (isMajorityVote(_index)) {
-            uint newSafeThreshold = proposals[_index].newThreshold;
-            address elected = proposals[_index].owner;
-            if (proposals[_index].proposalType == ProposalType.addOwner) {
-                addOwnerWithThreshold(elected, newSafeThreshold);
-            } else {
-                //removeOwner
-                address[] memory currentOwners = getOwners();
-                address prevOwner = SENTINEL_OWNERS;
-                address owner;
-                for (uint i; i < currentOwners.length; i++) {
-                    if (currentOwners[i] == proposals[_index].owner) {
-                        owner = currentOwners[i];
-                        if(i != 0) {
-                            prevOwner = currentOwners[i - 1];
-                        }
-                    }
-                }
-                removeOwner(prevOwner, owner, newSafeThreshold);
-            }
-            proposals[_index].proposalStatus = ProposalStatus.closed;
+            executeProposal(_index);
         } else {
             votes[msg.sender].push(_index);
         }
@@ -127,8 +108,32 @@ contract Ballot is OwnerManager {
         return false;
     }
 
-    function isMajorityVote(uint _index) internal view returns(bool){
+    function isMajorityVote(uint _index) public view returns(bool){
         uint total = bPool.totalSupply();
         return proposals[_index].votes * 2 > total;
+    }
+
+    function executeProposal(uint _index) public {
+        require(isMajorityVote(_index), "B6");
+
+        uint newSafeThreshold = proposals[_index].newThreshold;
+        address elected = proposals[_index].owner;
+        if (proposals[_index].proposalType == ProposalType.addOwner) {
+            addOwnerWithThreshold(elected, newSafeThreshold);
+        } else {
+            address[] memory currentOwners = getOwners();
+            address prevOwner = SENTINEL_OWNERS;
+            address owner;
+            for (uint i; i < currentOwners.length; i++) {
+                if (currentOwners[i] == proposals[_index].owner) {
+                    owner = currentOwners[i];
+                    if(i != 0) {
+                        prevOwner = currentOwners[i - 1];
+                    }
+                }
+            }
+            removeOwner(prevOwner, owner, newSafeThreshold);
+        }
+        proposals[_index].proposalStatus = ProposalStatus.closed;
     }
 }

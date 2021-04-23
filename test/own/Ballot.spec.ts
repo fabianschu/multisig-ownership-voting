@@ -6,6 +6,7 @@ import { BigNumber, Contract } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 
 const MAX = ethers.constants.MaxUint256;
+const MIN = ethers.constants.Zero;
 const firstProposalIdx = 0;
 const secondProposalIdx = 1;
 const addOwnerProposal = 0;
@@ -467,7 +468,7 @@ describe("Ballot", async () => {
           expect(owners[0]).to.equal(bob.address);
         });
 
-        it.only("should remove new owner (bob) from safe", async () => {
+        it("should remove new owner (bob) from safe", async () => {
           await safeInstance.addProposal(
             removeOwnerProposal,
             bob.address,
@@ -485,6 +486,38 @@ describe("Ballot", async () => {
           expect(owners.length).to.equal(1);
           expect(owners[0]).to.equal(alice.address);
         });
+      });
+    });
+
+    describe("#executeProposal", () => {
+      beforeEach(async () => {
+        eddieInitialBalance = await bPoolinstance.balanceOf(eddie.address);
+        await bPoolinstance.approve(safeInstance.address, MAX);
+        await safeInstance.stake();
+        await bPoolinstance
+          .connect(eddie)
+          .joinPool(ethers.utils.parseEther("300"), [MAX, MAX]);
+        await bPoolinstance.connect(bob).approve(safeInstance.address, MAX);
+        await safeInstance.connect(bob).stake();
+        await safeInstance.addProposal(
+          addOwnerProposal,
+          bob.address,
+          newThreshold
+        );
+        await safeInstance.connect(bob).vote(firstProposalIdx);
+      });
+
+      it("should revert if there is no majority", async () => {
+        const executeProposal = safeInstance.executeProposal(firstProposalIdx);
+        await expect(executeProposal).to.be.revertedWith("B6");
+      });
+
+      it("should add the owner if there is a majority", async () => {
+        await bPoolinstance
+          .connect(eddie)
+          .exitPool(ethers.utils.parseEther("300"), [MIN, MIN]);
+        const executeProposal = safeInstance.executeProposal(firstProposalIdx);
+        expect(await safeInstance.isOwner(bob.address)).to.equal(true);
       });
     });
   });

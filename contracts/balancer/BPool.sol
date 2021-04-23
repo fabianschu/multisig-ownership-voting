@@ -405,7 +405,6 @@ contract BPool is BBronze, BToken, BMath {
         _pullPoolShare(msg.sender, poolAmountIn);
         _pushPoolShare(_factory, exitFee);
         _burnPoolShare(pAiAfterExitFee);
-
         for (uint i = 0; i < _tokens.length; i++) {
             address t = _tokens[i];
             uint bal = _records[t].balance;
